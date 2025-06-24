@@ -5,16 +5,13 @@
 	"repository": {
 		"url": "https://github.com/d-buckner/piano"
 	},
-	"browser": "build/Piano.js",
-	"main": "build/esm/Piano.js",
-	"module": "build/esm/Piano.js",
+	"main": "build/index.js",
 	"type": "module",
-	"unpkg": "build/Piano.js",
-	"types": "build/esm/Piano.d.ts",
+	"types": "build/index.d.ts",
 	"scripts": {
-		"build": "tsc",
+		"build": "vite build",
 		"prepare": "npm run build",
-		"increment": "npm version v$(semver --increment $(npm show @tonejs/piano version)) --git-tag-version=false --allow-same-version",
+		"increment": "npm version v$(semver --increment $(npm show d-piano version)) --git-tag-version=false --allow-same-version",
 		"lint": "eslint . --ext .ts",
 		"lint:fix": "eslint . --ext .ts --fix",
 		"watch": "tsc --watch"
@@ -26,12 +23,12 @@
 		"src",
 		"scripts"
 	],
-	"author": "Yotam Mann",
+	"author": "d-bucker",
 	"license": "MIT",
 	"devDependencies": {
 		"@types/chai": "^4.2.11",
 		"@types/mocha": "^7.0.2",
-		"@types/node": "^12.6.2",
+		"@types/node": "^24.0.4",
 		"@typescript-eslint/eslint-plugin": "^8.35.0",
 		"@typescript-eslint/parser": "^8.35.0",
 		"chai": "^4.2.0",
@@ -45,6 +42,9 @@
 		"ts-loader": "^7.0.1",
 		"tslint": "^5.18.0",
 		"typescript": "^5.8.3",
+		"vite": "^7.0.0",
+		"vite-bundle-visualizer": "^1.2.1",
+		"vite-plugin-dts": "^4.5.4",
 		"webpack": "^4.43.0",
 		"webpack-cli": "^3.3.11"
 	},
