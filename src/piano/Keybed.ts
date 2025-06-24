@@ -1,7 +1,11 @@
-import { Gain, ToneAudioBuffers, ToneBufferSource } from 'tone'
-import { PianoComponent, PianoComponentOptions, UrlsMap } from './Component'
-import { getReleasesUrl } from './Salamander'
-import { randomBetween } from './Util'
+import { ToneAudioBuffers, ToneBufferSource } from 'tone';
+
+import { PianoComponent } from './Component';
+import { getReleasesUrl } from './Salamander';
+import { randomBetween } from './Util';
+
+import type { PianoComponentOptions, UrlsMap } from './Component';
+
 
 interface KeybedOptions extends PianoComponentOptions {
 	minNote: number
@@ -13,25 +17,25 @@ export class Keybed extends PianoComponent {
 	/**
 	 * All of the buffers of keybed clicks
 	 */
-	private _buffers: ToneAudioBuffers
+	private _buffers: ToneAudioBuffers;
 
 	/**
 	 * The urls to load
 	 */
-	private _urls: UrlsMap = {}
+	private _urls: UrlsMap = {};
 
 	constructor(options: KeybedOptions) {
-		super(options)
+		super(options);
 
 		for (let i = options.minNote; i <= options.maxNote; i++) {
-			this._urls[i] = getReleasesUrl(i)
+			this._urls[i] = getReleasesUrl(i);
 		}
 	}
 
 	protected _internalLoad(): Promise<void> {
 		return new Promise(success => {
-			this._buffers = new ToneAudioBuffers(this._urls, success, this.samples)
-		})
+			this._buffers = new ToneAudioBuffers(this._urls, success, this.samples);
+		});
 	}
 
 	start(note: number, time: number, velocity: number): void {
@@ -39,9 +43,9 @@ export class Keybed extends PianoComponent {
 			const source = new ToneBufferSource({
 				context: this.context,
 				url: this._buffers.get(note),
-			}).connect(this.output)
+			}).connect(this.output);
 			// randomize the velocity slightly
-			source.start(time, 0, undefined, 0.015 * velocity * randomBetween(0.5, 1))
+			source.start(time, 0, undefined, 0.015 * velocity * randomBetween(0.5, 1));
 		}
 	}
 }

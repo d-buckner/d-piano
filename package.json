@@ -15,7 +15,8 @@
 		"build": "tsc",
 		"prepare": "npm run build",
 		"increment": "npm version v$(semver --increment $(npm show @tonejs/piano version)) --git-tag-version=false --allow-same-version",
-		"lint": "tslint --project tsconfig.json --fix",
+		"lint": "eslint . --ext .ts",
+		"lint:fix": "eslint . --ext .ts --fix",
 		"watch": "tsc --watch"
 	},
 	"files": [
@@ -31,7 +32,11 @@
 		"@types/chai": "^4.2.11",
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^12.6.2",
+		"@typescript-eslint/eslint-plugin": "^8.35.0",
+		"@typescript-eslint/parser": "^8.35.0",
 		"chai": "^4.2.0",
+		"eslint": "^9.29.0",
+		"eslint-plugin-import": "^2.32.0",
 		"mocha": "^7.1.1",
 		"npm-run-all": "^4.1.5",
 		"semver": "^5.5.0",

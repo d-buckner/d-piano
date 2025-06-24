@@ -1,5 +1,7 @@
-import { Param, ToneAudioNode, Unit, Volume } from 'tone';
-import type { ToneAudioNodeOptions } from 'tone';
+import { ToneAudioNode, Volume } from 'tone';
+
+import type { ToneAudioNodeOptions, Param, Unit } from 'tone';
+
 
 export interface PianoComponentOptions extends ToneAudioNodeOptions {
 	volume: Unit.Decibels
@@ -15,38 +17,40 @@ export interface UrlsMap {
  * Base class for the other components
  */
 export abstract class PianoComponent extends ToneAudioNode {
-	readonly name = 'PianoComponent'
-	readonly input = undefined
-	readonly output = new Volume({ context: this.context })
+	readonly name = 'PianoComponent';
+
+	readonly input = undefined;
+
+	readonly output = new Volume({ context: this.context });
 
 	/**
 	 * If the component is enabled or not
 	 */
-	protected _enabled: boolean = false
+	protected _enabled: boolean = false;
 
 	/**
 	 * The volume output of the component
 	 */
-	readonly volume: Param<'decibels'> = this.output.volume
+	readonly volume: Param<'decibels'> = this.output.volume;
 
 	/**
 	 * Boolean indication of if the component is loaded or not
 	 */
-	private _loaded: boolean = false
+	private _loaded: boolean = false;
 
 	/**
 	 * The directory to load the Salamander samples out of
 	 */
-	readonly samples: string
+	readonly samples: string;
 
 	constructor(options: PianoComponentOptions) {
-		super(options)
+		super(options);
 
-		this.volume.value = options.volume
+		this.volume.value = options.volume;
 
-		this._enabled = options.enabled
+		this._enabled = options.enabled;
 
-		this.samples = options.samples
+		this.samples = options.samples;
 	}
 
 	/**
@@ -58,7 +62,7 @@ export abstract class PianoComponent extends ToneAudioNode {
 	 * If the samples are loaded or not
 	 */
 	get loaded(): boolean {
-		return this._loaded
+		return this._loaded;
 	}
 
 	/**
@@ -66,10 +70,10 @@ export abstract class PianoComponent extends ToneAudioNode {
 	 */
 	async load(): Promise<void> {
 		if (this._enabled) {
-			await this._internalLoad()
-			this._loaded = true
+			await this._internalLoad();
+			this._loaded = true;
 		} else {
-			return Promise.resolve()
+			return Promise.resolve();
 		}
 	}
 }

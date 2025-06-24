@@ -1,6 +1,9 @@
-import { Sampler, ToneAudioNode } from 'tone'
-import { PianoComponentOptions, UrlsMap } from './Component'
-import { getNotesUrl } from './Salamander'
+import { Sampler, ToneAudioNode } from 'tone';
+
+import { getNotesUrl } from './Salamander';
+
+import type { PianoComponentOptions, UrlsMap } from './Component';
+
 
 interface PianoStringOptions extends PianoComponentOptions {
 	notes: number[]
@@ -12,24 +15,25 @@ interface PianoStringOptions extends PianoComponentOptions {
  */
 export class PianoString extends ToneAudioNode {
 
-	readonly name = 'PianoString'
+	readonly name = 'PianoString';
 
-	private _sampler: Sampler
+	private _sampler: Sampler;
 
-	output: Sampler
-	input: undefined
+	output: Sampler;
 
-	private _urls: UrlsMap = {}
+	input: undefined;
 
-	readonly samples: string
+	private _urls: UrlsMap = {};
+
+	readonly samples: string;
 
 	constructor(options: PianoStringOptions) {
-		super(options)
+		super(options);
 
 		// create the urls
-		options.notes.forEach(note => this._urls[note] = getNotesUrl(note, options.velocity))
+		options.notes.forEach(note => this._urls[note] = getNotesUrl(note, options.velocity));
 
-		this.samples = options.samples
+		this.samples = options.samples;
 	}
 
 	load(): Promise<void> {
@@ -42,15 +46,15 @@ export class PianoString extends ToneAudioNode {
 				release: 0.4,
 				urls: this._urls,
 				volume: 3,
-			})
-		})
+			});
+		});
 	}
 
 	triggerAttack(note: string, time: number, velocity: number): void {
-		this._sampler.triggerAttack(note, time, velocity)
+		this._sampler.triggerAttack(note, time, velocity);
 	}
 
 	triggerRelease(note: string, time: number): void {
-		this._sampler.triggerRelease(note, time)
+		this._sampler.triggerRelease(note, time);
 	}
 }

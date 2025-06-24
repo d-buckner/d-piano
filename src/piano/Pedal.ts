@@ -1,19 +1,23 @@
-import { ToneAudioBuffers, ToneBufferSource } from 'tone'
-import { PianoComponent, PianoComponentOptions } from './Component'
-import { randomBetween } from './Util'
+import { ToneAudioBuffers, ToneBufferSource } from 'tone';
+
+import { PianoComponent } from './Component';
+import { randomBetween } from './Util';
+
+import type { PianoComponentOptions } from './Component';
+
 
 export class Pedal extends PianoComponent {
 
-	private _downTime: number = Infinity
+	private _downTime: number = Infinity;
 
-	private _currentSound: ToneBufferSource = null
+	private _currentSound: ToneBufferSource = null;
 
-	private _buffers: ToneAudioBuffers
+	private _buffers: ToneAudioBuffers;
 
 	constructor(options: PianoComponentOptions) {
-		super(options)
+		super(options);
 
-		this._downTime = Infinity
+		this._downTime = Infinity;
 	}
 
 	protected _internalLoad(): Promise<void> {
@@ -23,8 +27,8 @@ export class Pedal extends PianoComponent {
 				down2: 'pedalD2.mp3',
 				up1: 'pedalU1.mp3',
 				up2: 'pedalU2.mp3',
-			}, success, this.samples)
-		})
+			}, success, this.samples);
+		});
 	}
 
 	/**
@@ -32,9 +36,9 @@ export class Pedal extends PianoComponent {
 	 */
 	private _squash(time: number): void {
 		if (this._currentSound && this._currentSound.state !== 'stopped') {
-			this._currentSound.stop(time)
+			this._currentSound.stop(time);
 		}
-		this._currentSound = null
+		this._currentSound = null;
 	}
 
 	private _playSample(time: number, dir: 'down' | 'up'): void {
@@ -45,8 +49,8 @@ export class Pedal extends PianoComponent {
 				fadeIn: 0.05,
 				fadeOut: 0.1,
 				url: this._buffers.get(`${dir}${Math.random() > 0.5 ? 1 : 2}`),
-			}).connect(this.output)
-			this._currentSound.start(time, randomBetween(0, 0.01), undefined, 0.1 * randomBetween(0.5, 1))
+			}).connect(this.output);
+			this._currentSound.start(time, randomBetween(0, 0.01), undefined, 0.1 * randomBetween(0.5, 1));
 		}
 	}
 
@@ -54,24 +58,24 @@ export class Pedal extends PianoComponent {
 	 * Put the pedal down
 	 */
 	down(time: number): void {
-		this._squash(time)
-		this._downTime = time
-		this._playSample(time, 'down')
+		this._squash(time);
+		this._downTime = time;
+		this._playSample(time, 'down');
 	}
 
 	/**
 	 * Put the pedal up
 	 */
 	up(time: number): void {
-		this._squash(time)
-		this._downTime = Infinity
-		this._playSample(time, 'up')
+		this._squash(time);
+		this._downTime = Infinity;
+		this._playSample(time, 'up');
 	}
 
 	/**
 	 * Indicates if the pedal is down at the given time
 	 */
 	isDown(time: number): boolean {
-		return time > this._downTime
+		return time > this._downTime;
 	}
 }
