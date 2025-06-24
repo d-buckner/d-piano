@@ -8,7 +8,8 @@ import { Keybed } from './Keybed'
 import { Pedal } from './Pedal'
 import { PianoStrings } from './Strings'
 
-type ToneAudioNodeOptions = import('tone/build/esm/core/context/ToneAudioNode').ToneAudioNodeOptions
+import type { ToneAudioNodeOptions } from 'tone'
+
 
 export interface PianoOptions extends ToneAudioNodeOptions {
 	/**
@@ -93,22 +94,22 @@ export class Piano extends ToneAudioNode<PianoOptions> {
 	/**
 	 * The volume level of the strings output. This is the main piano sound.
 	 */
-	strings: Param<"decibels">
+	strings: Param<'decibels'>
 
 	/**
 	 * The volume output of the pedal up and down sounds
 	 */
-	pedal: Param<"decibels">
+	pedal: Param<'decibels'>
 
 	/**
 	 * The volume of the string harmonics
 	 */
-	harmonics: Param<"decibels">
+	harmonics: Param<'decibels'>
 
 	/**
 	 * The volume of the keybed click sound
 	 */
-	keybed: Param<"decibels">
+	keybed: Param<'decibels'>
 
 	/**
 	 * The maximum number of notes which can be held at once
@@ -177,12 +178,12 @@ export class Piano extends ToneAudioNode<PianoOptions> {
 	static getDefaults(): PianoOptions {
 		return Object.assign(ToneAudioNode.getDefaults(), {
 			maxNote: 108,
+			maxPolyphony: 32,
 			minNote: 21,
 			pedal: true,
 			release: false,
 			url: 'https://tambien.github.io/Piano/audio/',
 			velocities: 1,
-			maxPolyphony: 32,
 			volume: {
 				harmonics: 0,
 				keybed: 0,
@@ -324,4 +325,3 @@ export class Piano extends ToneAudioNode<PianoOptions> {
 		return this
 	}
 }
-

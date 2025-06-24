@@ -1,6 +1,5 @@
-import { Param, ToneAudioNode, Unit, Volume } from 'tone'
-
-type ToneAudioNodeOptions = import('tone/build/esm/core/context/ToneAudioNode').ToneAudioNodeOptions
+import { Param, ToneAudioNode, Unit, Volume } from 'tone';
+import type { ToneAudioNodeOptions } from 'tone';
 
 export interface PianoComponentOptions extends ToneAudioNodeOptions {
 	volume: Unit.Decibels
@@ -28,7 +27,7 @@ export abstract class PianoComponent extends ToneAudioNode {
 	/**
 	 * The volume output of the component
 	 */
-	readonly volume: Param<"decibels"> = this.output.volume
+	readonly volume: Param<'decibels'> = this.output.volume
 
 	/**
 	 * Boolean indication of if the component is loaded or not

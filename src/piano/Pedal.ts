@@ -40,11 +40,11 @@ export class Pedal extends PianoComponent {
 	private _playSample(time: number, dir: 'down' | 'up'): void {
 		if (this._enabled) {
 			this._currentSound = new ToneBufferSource({
-				url: this._buffers.get(`${dir}${Math.random() > 0.5 ? 1 : 2}`),
 				context: this.context,
 				curve: 'exponential',
 				fadeIn: 0.05,
 				fadeOut: 0.1,
+				url: this._buffers.get(`${dir}${Math.random() > 0.5 ? 1 : 2}`),
 			}).connect(this.output)
 			this._currentSound.start(time, randomBetween(0, 0.01), undefined, 0.1 * randomBetween(0.5, 1))
 		}
