@@ -1,7 +1,8 @@
-import { ToneAudioBuffers, ToneBufferSource } from 'tone';
+import { ToneBufferSource } from 'tone';
 
 import { PianoComponent } from './Component';
 import { getReleasesUrl } from './Salamander';
+import SharedAudioBuffers from './SharedAudioBuffers';
 import { randomBetween } from './Util';
 
 import type { PianoComponentOptions, UrlsMap } from './Component';
@@ -17,7 +18,7 @@ export class Keybed extends PianoComponent {
 	/**
 	 * All of the buffers of keybed clicks
 	 */
-	private _buffers: ToneAudioBuffers;
+	private _buffers: SharedAudioBuffers;
 
 	/**
 	 * The urls to load
@@ -34,7 +35,7 @@ export class Keybed extends PianoComponent {
 
 	protected _internalLoad(): Promise<void> {
 		return new Promise(success => {
-			this._buffers = new ToneAudioBuffers(this._urls, success, this.samples);
+			this._buffers = new SharedAudioBuffers(this._urls, success, this.samples);
 		});
 	}
 

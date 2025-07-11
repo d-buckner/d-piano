@@ -1,7 +1,8 @@
-import { ToneAudioBuffers, ToneBufferSource } from 'tone';
+import { ToneBufferSource } from 'tone';
 
 import { PianoComponent } from './Component';
 import { randomBetween } from './Util';
+import SharedAudioBuffers from './SharedAudioBuffers';
 
 import type { PianoComponentOptions } from './Component';
 
@@ -12,7 +13,7 @@ export class Pedal extends PianoComponent {
 
 	private _currentSound: ToneBufferSource = null;
 
-	private _buffers: ToneAudioBuffers;
+	private _buffers: SharedAudioBuffers;
 
 	constructor(options: PianoComponentOptions) {
 		super(options);
@@ -22,7 +23,7 @@ export class Pedal extends PianoComponent {
 
 	protected _internalLoad(): Promise<void> {
 		return new Promise((success) => {
-			this._buffers = new ToneAudioBuffers({
+			this._buffers = new SharedAudioBuffers({
 				down1: 'pedalD1.mp3',
 				down2: 'pedalD2.mp3',
 				up1: 'pedalU1.mp3',
