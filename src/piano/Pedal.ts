@@ -24,10 +24,10 @@ export class Pedal extends PianoComponent {
 
   protected async _internalLoad(): Promise<void> {
     this._buffers = await AudioBufferCache.getBuffers(this.samples, {
-      down1: 'pedalD1.mp3',
-      down2: 'pedalD2.mp3',
-      up1: 'pedalU1.mp3',
-      up2: 'pedalU2.mp3', 
+      down1: 'pedalD1.ogg',
+      down2: 'pedalD2.ogg',
+      up1: 'pedalU1.ogg',
+      up2: 'pedalU2.ogg', 
     });
   }
 
@@ -76,6 +76,6 @@ export class Pedal extends PianoComponent {
 	 * Indicates if the pedal is down at the given time
 	 */
   isDown(time: number): boolean {
-    return time > this._downTime;
+    return time >= this._downTime;
   }
 }

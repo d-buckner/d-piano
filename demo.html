@@ -186,7 +186,7 @@
   </div>
 
   <div class="fetch-stats">
-    <h3>MP3 Fetch Statistics</h3>
+    <h3>Sample Fetch Statistics</h3>
     <div class="fetch-summary" id="fetchSummary">
       Total fetches: 0 | Unique URLs: 0
     </div>
@@ -228,13 +228,13 @@
       pianoTimes: []
     };
     
-    // Intercept fetch to track MP3 requests
+    // Intercept fetch to track sample requests
     const originalFetch = window.fetch;
     window.fetch = function(...args) {
       const url = args[0];
       
-      // Check if it's an MP3 request
-      if (typeof url === 'string' && url.includes('.mp3')) {
+      // Check if it's a sample request
+      if (typeof url === 'string' && url.includes('.ogg')) {
         totalFetches++;
         const currentCount = fetchStats.get(url) || 0;
         fetchStats.set(url, currentCount + 1);
