@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiple Piano Instances Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .piano-container {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .piano-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    button:active {
+      transform: translateY(1px);
+    }
+    .note-button {
+      background-color: #28a745;
+    }
+    .note-button:hover {
+      background-color: #218838;
+    }
+    .chord-button {
+      background-color: #17a2b8;
+    }
+    .chord-button:hover {
+      background-color: #138496;
+    }
+    .stop-button {
+      background-color: #dc3545;
+    }
+    .stop-button:hover {
+      background-color: #c82333;
+    }
+    .status {
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #666;
+    }
+    .loading {
+      color: #ffc107;
+    }
+    .ready {
+      color: #28a745;
+    }
+    .error {
+      color: #dc3545;
+    }
+    h2 {
+      margin-top: 0;
+      color: #444;
+    }
+    .demo-section {
+      margin-top: 30px;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .instructions {
+      background: #e9ecef;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    .instructions h3 {
+      margin-top: 0;
+    }
+    .instructions code {
+      background: #fff;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    .fetch-stats {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .fetch-stats h3 {
+      margin-top: 0;
+      color: #444;
+    }
+    .fetch-list {
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .fetch-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .fetch-url {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-right: 10px;
+    }
+    .fetch-count {
+      font-weight: bold;
+      color: #007bff;
+      min-width: 30px;
+      text-align: right;
+    }
+    .fetch-summary {
+      margin-top: 10px;
+      padding: 10px;
+      background: #e9ecef;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .timing-stats {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .timing-stats h3 {
+      margin-top: 0;
+      color: #444;
+    }
+    .timing-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .timing-total {
+      font-weight: bold;
+      font-size: 16px;
+      color: #007bff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Multiple Piano Instances Demo</h1>
+  
+  <div class="timing-stats">
+    <h3>Loading Performance</h3>
+    <div id="timingDisplay">
+      <div style="color: #999;">Not started yet...</div>
+    </div>
+  </div>
+
+  <div class="fetch-stats">
+    <h3>MP3 Fetch Statistics</h3>
+    <div class="fetch-summary" id="fetchSummary">
+      Total fetches: 0 | Unique URLs: 0
+    </div>
+    <div class="fetch-list" id="fetchList">
+      <div style="color: #999;">No fetches yet...</div>
+    </div>
+  </div>
+
+  <div id="pianoContainers">
+    <!-- Piano containers will be generated dynamically -->
+  </div>
+
+  <div class="demo-section">
+    <h2>Combined Examples</h2>
+    <button onclick="window.playSequence()">Play Sequence (All Pianos)</button>
+    <button onclick="window.playHarmony()">Play Harmony (All Pianos)</button>
+    <button onclick="window.playArpeggio()">Play Arpeggio (All Pianos)</button>
+    <button class="stop-button" onclick="window.stopAll()">Stop All Pianos</button>
+  </div>
+
+  <!-- Load Tone.js from CDN -->
+  <script src="https://unpkg.com/tone@latest/build/Tone.js"></script>
+  
+  <script type="module">
+    import { Piano } from './src/index.ts';
+    
+    // Store piano instances
+    const pianos = [];
+    const activeNotes = new Map();
+    
+    // Track fetch requests
+    const fetchStats = new Map();
+    let totalFetches = 0;
+    
+    // Track timing
+    const timingStats = {
+      startTime: null,
+      endTime: null,
+      pianoTimes: []
+    };
+    
+    // Intercept fetch to track MP3 requests
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+      const url = args[0];
+      
+      // Check if it's an MP3 request
+      if (typeof url === 'string' && url.includes('.mp3')) {
+        totalFetches++;
+        const currentCount = fetchStats.get(url) || 0;
+        fetchStats.set(url, currentCount + 1);
+        updateFetchDisplay();
+      }
+      
+      return originalFetch.apply(this, args);
+    };
+    
+    // Update the fetch display
+    function updateFetchDisplay() {
+      const summaryEl = document.getElementById('fetchSummary');
+      const listEl = document.getElementById('fetchList');
+      
+      summaryEl.textContent = `Total fetches: ${totalFetches} | Unique URLs: ${fetchStats.size}`;
+      
+      // Sort by count (descending) and then by URL
+      const sorted = Array.from(fetchStats.entries())
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+      
+      listEl.innerHTML = sorted.map(([url, count]) => {
+        const filename = url.split('/').pop();
+        return `
+          <div class="fetch-item">
+            <div class="fetch-url" title="${url}">${filename}</div>
+            <div class="fetch-count">${count}x</div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Update timing display
+    function updateTimingDisplay() {
+      const timingEl = document.getElementById('timingDisplay');
+      
+      if (!timingStats.startTime) {
+        timingEl.innerHTML = '<div style="color: #999;">Not started yet...</div>';
+        return;
+      }
+      
+      const currentTime = timingStats.endTime || Date.now();
+      const totalTime = currentTime - timingStats.startTime;
+      
+      let html = '';
+      
+      // Show individual piano loading times
+      timingStats.pianoTimes.forEach((time, index) => {
+        html += `
+          <div class="timing-item">
+            <span>Piano ${index + 1}</span>
+            <span>${time}ms</span>
+          </div>
+        `;
+      });
+      
+      // Show total time
+      if (timingStats.endTime) {
+        html += `
+          <div class="timing-item timing-total">
+            <span>Total Loading Time</span>
+            <span>${totalTime}ms</span>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="timing-item">
+            <span>Loading in progress...</span>
+            <span>${totalTime}ms</span>
+          </div>
+        `;
+      }
+      
+      timingEl.innerHTML = html;
+    }
+
+    // Create piano UI containers
+    function createPianoContainers() {
+      const container = document.getElementById('pianoContainers');
+      
+      for (let i = 0; i < 10; i++) {
+        const octave = 3 + (i % 3); // Cycle through octaves 3, 4, 5
+        const pianoDiv = document.createElement('div');
+        pianoDiv.className = 'piano-container';
+        pianoDiv.innerHTML = `
+          <h2>Piano ${i + 1} - Octave ${octave}</h2>
+          <div class="status" id="status${i + 1}">Initializing...</div>
+          <div class="piano-controls">
+            <button class="note-button" onclick="window.playNote(${i}, 'C${octave}')">Play C${octave}</button>
+            <button class="note-button" onclick="window.playNote(${i}, 'E${octave}')">Play E${octave}</button>
+            <button class="note-button" onclick="window.playNote(${i}, 'G${octave}')">Play G${octave}</button>
+            <button class="chord-button" onclick="window.playChord(${i}, ['C${octave}', 'E${octave}', 'G${octave}'])">Play C Major</button>
+            <button class="stop-button" onclick="window.stopPiano(${i})">Stop All</button>
+          </div>
+        `;
+        container.appendChild(pianoDiv);
+      }
+    }
+
+    // Initialize pianos
+    async function initPianos() {
+      try {
+        // Create UI containers first
+        createPianoContainers();
+        
+        // Start timing
+        timingStats.startTime = Date.now();
+        updateTimingDisplay();
+        
+        // Update display every 100ms during loading
+        const timingInterval = setInterval(updateTimingDisplay, 100);
+
+        // Create 10 piano instances
+        for (let i = 0; i < 10; i++) {
+          const pianoStartTime = Date.now();
+          
+          const piano = new Piano({
+            velocities: 16,
+            release: true, // Enable harmonics and keybed
+            volume: {
+              strings: -12,
+              pedal: -12,
+              keybed: -12,
+              harmonics: -12
+            }
+          }).toDestination();
+          
+          pianos.push(piano);
+          
+          // Update status
+          const statusEl = document.getElementById(`status${i + 1}`);
+          statusEl.textContent = 'Loading samples...';
+          statusEl.className = 'status loading';
+          
+          // Load samples
+          await piano.load();
+          
+          // Record piano loading time
+          const pianoEndTime = Date.now();
+          timingStats.pianoTimes.push(pianoEndTime - pianoStartTime);
+          
+          statusEl.textContent = 'Ready!';
+          statusEl.className = 'status ready';
+        }
+        
+        // End timing
+        timingStats.endTime = Date.now();
+        clearInterval(timingInterval);
+        updateTimingDisplay();
+        
+        console.log('All pianos loaded successfully!');
+      } catch (error) {
+        console.error('Error loading pianos:', error);
+        document.querySelectorAll('.status').forEach(el => {
+          el.textContent = 'Error: ' + error.message;
+          el.className = 'status error';
+        });
+      }
+    }
+
+    // Play a single note
+    window.playNote = async function(pianoIndex, note) {
+      if (!pianos[pianoIndex]) {
+        console.error('Piano not initialized');
+        return;
+      }
+      
+      await Tone.start();
+      pianos[pianoIndex].keyDown({ note, velocity: 0.8 });
+      
+      // Store active note
+      const key = `${pianoIndex}-${note}`;
+      activeNotes.set(key, true);
+      
+      // Auto-release after 2 seconds
+      setTimeout(() => {
+        if (activeNotes.get(key)) {
+          stopNote(pianoIndex, note);
+        }
+      }, 2000);
+    }
+
+    // Stop a single note
+    window.stopNote = function(pianoIndex, note) {
+      if (!pianos[pianoIndex]) return;
+      
+      pianos[pianoIndex].keyUp({ note });
+      activeNotes.delete(`${pianoIndex}-${note}`);
+    }
+
+    // Play a chord
+    window.playChord = async function(pianoIndex, notes) {
+      await Tone.start();
+      notes.forEach(note => window.playNote(pianoIndex, note));
+    }
+
+    // Stop all notes on a piano
+    window.stopPiano = function(pianoIndex) {
+      if (!pianos[pianoIndex]) return;
+      
+      pianos[pianoIndex].stopAll();
+      
+      // Clear active notes for this piano
+      for (const [key] of activeNotes) {
+        if (key.startsWith(`${pianoIndex}-`)) {
+          activeNotes.delete(key);
+        }
+      }
+    }
+
+    // Stop all pianos
+    window.stopAll = function() {
+      pianos.forEach((piano, index) => window.stopPiano(index));
+    }
+
+    // Play a sequence across all pianos
+    window.playSequence = async function() {
+      await Tone.start();
+      window.stopAll();
+      
+      const sequence = [
+        { piano: 0, note: 'C4', delay: 0 },
+        { piano: 1, note: 'E5', delay: 200 },
+        { piano: 2, note: 'G3', delay: 400 },
+        { piano: 0, note: 'A4', delay: 600 },
+        { piano: 1, note: 'C5', delay: 800 },
+        { piano: 2, note: 'F3', delay: 1000 },
+      ];
+      
+      sequence.forEach(({ piano, note, delay }) => {
+        setTimeout(() => window.playNote(piano, note), delay);
+      });
+    }
+
+    // Play harmony across all pianos
+    window.playHarmony = async function() {
+      await Tone.start();
+      window.stopAll();
+      
+      // Play a C major chord spread across pianos
+      window.playNote(2, 'C3'); // Bass
+      window.playNote(0, 'E4'); // Middle
+      window.playNote(0, 'G4'); // Middle
+      window.playNote(1, 'C5'); // High
+      window.playNote(1, 'E5'); // High
+    }
+
+    // Play an arpeggio across all pianos
+    window.playArpeggio = async function() {
+      await Tone.start();
+      window.stopAll();
+      
+      const notes = [
+        { piano: 2, note: 'C3' },
+        { piano: 2, note: 'E3' },
+        { piano: 0, note: 'G4' },
+        { piano: 0, note: 'C4' },
+        { piano: 1, note: 'E5' },
+        { piano: 1, note: 'G5' },
+        { piano: 1, note: 'C6' },
+      ];
+      
+      notes.forEach(({ piano, note }, index) => {
+        setTimeout(() => window.playNote(piano, note), index * 150);
+      });
+    }
+
+    // Initialize on load
+    window.addEventListener('load', initPianos);
+  </script>
+</body>
+</html>

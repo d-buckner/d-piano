@@ -17,41 +17,41 @@ export interface UrlsMap {
  * Base class for the other components
  */
 export abstract class PianoComponent extends ToneAudioNode {
-	readonly name = 'PianoComponent';
+  readonly name = 'PianoComponent';
 
-	readonly input = undefined;
+  readonly input = undefined;
 
-	readonly output = new Volume({ context: this.context });
+  readonly output = new Volume({ context: this.context });
 
-	/**
+  /**
 	 * If the component is enabled or not
 	 */
-	protected _enabled: boolean = false;
+  protected _enabled: boolean = false;
 
-	/**
+  /**
 	 * The volume output of the component
 	 */
-	readonly volume: Param<'decibels'> = this.output.volume;
+  readonly volume: Param<'decibels'> = this.output.volume;
 
-	/**
+  /**
 	 * Boolean indication of if the component is loaded or not
 	 */
-	private _loaded: boolean = false;
+  private _loaded: boolean = false;
 
-	/**
+  /**
 	 * The directory to load the Salamander samples out of
 	 */
-	readonly samples: string;
+  readonly samples: string;
 
-	constructor(options: PianoComponentOptions) {
-		super(options);
+  constructor(options: PianoComponentOptions) {
+    super(options);
 
-		this.volume.value = options.volume;
+    this.volume.value = options.volume;
 
-		this._enabled = options.enabled;
+    this._enabled = options.enabled;
 
-		this.samples = options.samples;
-	}
+    this.samples = options.samples;
+  }
 
 	/**
 	 * Load the component internally
@@ -62,18 +62,18 @@ export abstract class PianoComponent extends ToneAudioNode {
 	 * If the samples are loaded or not
 	 */
 	get loaded(): boolean {
-		return this._loaded;
+	  return this._loaded;
 	}
 
 	/**
 	 * Load the samples
 	 */
 	async load(): Promise<void> {
-		if (this._enabled) {
-			await this._internalLoad();
-			this._loaded = true;
-		} else {
-			return Promise.resolve();
-		}
+	  if (this._enabled) {
+	    await this._internalLoad();
+	    this._loaded = true;
+	  } else {
+	    return Promise.resolve();
+	  }
 	}
 }

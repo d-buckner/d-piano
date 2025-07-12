@@ -35,7 +35,8 @@
 		],
 		"indent": [
 			true,
-			"tabs"
+			"spaces",
+			2
 		],
 		"whitespace": [
 			true,
@@ -67,7 +68,8 @@
 	"jsRules": {
 		"indent": [
 			true,
-			"tabs"
+			"spaces",
+			2
 		]
 	}
 }
