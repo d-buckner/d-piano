@@ -1,40 +1,44 @@
-# d-piano
+![Piano Logo with keyboard and knobs](./tone-piano.png)
 
-A web audio piano instrument
+# @tonejs/piano
 
-## About
+Tone Piano is a Web Audio instrument which uses high-quality multi-sampled piano sounds provided by [Salamander Grand Piano](https://archive.org/details/SalamanderGrandPianoV3) 
 
-This is a fork of [@tonejs/piano](https://github.com/Tonejs/Piano) by Yotam Mann with performance optimizations for applications using multiple piano instances. Built on high-quality samples from [Salamander Grand Piano](https://github.com/sfztools/salamander-grand-piano).
-
-## Features
-
-- **Shared caching** - AudioBuffers shared across multiple piano instances
-- **High-quality samples** - Up to 16 velocity levels across 88 keys (Yamaha C5)
-- **Complete instrument** - Includes pedal sounds and string harmonics
+It has up to 16 velocity levels across 88 keys (sampled every third note) of a Yamaha C5. 
 
 ## Install
 
 Install the npm package:
 
-```bash
-npm install --save d-piano
+```
+npm install --save @tonejs/piano
 ```
 
-d-piano requires Tone.js as a peer dependency:
+Tone Piano requires Tone.js as a peer dependency (and webmidi to use MidiInput):
 
-```bash
-npm install --save tone
 ```
+npm install --save tone webmidi
+```
+
 
 ## Usage
 
 ### Import
 
-```javascript
-import { Piano } from 'd-piano'
+Using CommonJS:
+
+```js
+const Piano = require('@tonejs/piano');
+```
+
+Using ES6 modules:
+
+```js
+import { Piano } from '@tonejs/piano'
 ```
 
 ### Create and load samples
+
 
 ```javascript
 // create the piano and load 5 velocity steps
@@ -42,128 +46,47 @@ const piano = new Piano({
 	velocities: 5
 })
 
-// connect it to the speaker output
+//connect it to the speaker output
 piano.toDestination()
+```
 
-// load all samples (returns a promise)
+All of the samples are loaded with the `load()` method which returns a promise
+
+```javascript
 piano.load().then(() => {
-	console.log('Piano loaded!')
+	console.log('loaded!')
 })
 ```
 
-### Multiple Piano Instances (Optimized)
+## API reference
 
-The enhanced caching system makes creating multiple pianos efficient:
+Once the samples are loaded, it exposes 4 methods for playing the notes:
 
-```javascript
-// Create multiple piano instances - samples are shared automatically
-const piano1 = new Piano({ velocities: 3 })
-const piano2 = new Piano({ velocities: 5 })
-const piano3 = new Piano({ velocities: 1 })
 
-// Load all pianos - samples are fetched only once and shared
-Promise.all([
-	piano1.load(),
-	piano2.load(), 
-	piano3.load()
-]).then(() => {
-	console.log('All pianos loaded with optimized caching!')
-})
-```
+### `.keyDown({ note: string, time?: Time, velocity?: number })`
 
-## API Reference
+Press a note down on the piano. Optionally give it a time using Tone.js time notation or seconds relative to the AudioContext clock.
 
-### Piano Options
-
-```typescript
-interface PianoOptions {
-	velocities: number;    // Number of velocity steps to load (default: 1, max: 16)
-	minNote: number;       // Lowest MIDI note to load (default: 21)
-	maxNote: number;       // Highest MIDI note to load (default: 108)
-	release: boolean;      // Include release sounds (default: false)
-	pedal: boolean;        // Include pedal sounds (default: true)
-	url: string;           // Custom sample URL (optional)
-	maxPolyphony: number;  // Max simultaneous notes (default: 32)
-	volume: {              // Component volume levels in dB (default: 0)
-		pedal: number;
-		strings: number;
-		keybed: number;
-		harmonics: number;
-	}
-}
-```
-
-### Methods
-
-#### `.keyDown({ note: string, time?: Time, velocity?: number })`
-
-Press a note down on the piano. 
+The velocity is a value between 0-1. 
 
 ```javascript
-// Play a 'C4' immediately
-piano.keyDown({ note: 'C4' })
-
-// Play a 'C4' 1 second from now with velocity 0.8
-piano.keyDown({ note: 'C4', time: '+1', velocity: 0.8 })
+//play a 'C4' 1 second from now
+piano.keyDown({ note: 'C4', time: '+1' })
 ```
 
-#### `.keyUp({ note: string, time?: Time })`
+### `.keyUp({ note: string, time?: Time })`
 
-Release a note at the given time.
+Release a note at the given time. 
 
 ```javascript
-// Release the pressed 'C4' immediately
+//release the pressed 'C4' immediately
 piano.keyUp({ note: 'C4' })
 ```
 
-#### `.pedalDown({ time?: Time })`
+### `.pedalDown({ time?: Time })`
 
-Press and hold the sustain pedal. Notes played while the pedal is down will be sustained until the pedal is released.
+Press and hold the pedal starting at the given time. While the pedal is down, notes scheduled after the time will be sustained and released once the pedal is lifted.
 
-#### `.pedalUp({ time?: Time })`
+### `.pedalUp({ time?: Time })`
 
-Release the sustain pedal and dampen any sustained notes.
-
-#### `.load(): Promise<void>`
-
-Load all audio samples. Returns a promise that resolves when loading is complete.
-
-#### `.dispose()`
-
-Clean up the piano instance and free resources.
-
-## Development
-
-### Building
-
-```bash
-npm run build
-```
-
-### Testing
-
-```bash
-npm test
-```
-
-### Linting
-
-```bash
-npm run lint
-```
-
-## Credits
-
-This project builds upon the great work of:
-
-- **[@tonejs/piano](https://github.com/Tonejs/Piano)** by [Yotam Mann](https://github.com/tambien) - The original high-quality piano instrument that serves as the foundation for this project
-- **[Tone.js](https://tonejs.github.io/)** by [Yotam Mann](https://github.com/tambien) - The Web Audio framework that powers the audio engine
-- **[Salamander Grand Piano](https://github.com/sfztools/salamander-grand-piano)** - The high-quality piano samples used in this instrument
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+Release the pedal and also dampen any notes which are currently sustained. 

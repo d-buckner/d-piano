@@ -1,10 +1,8 @@
 import { Sampler, ToneAudioNode } from 'tone';
 
 import { getNotesUrl } from './Salamander';
-import SharedAudioBuffer from './SharedAudioBuffer';
 
 import type { PianoComponentOptions, UrlsMap } from './Component';
-import type { SharedBufferMap } from './types';
 
 
 interface PianoStringOptions extends PianoComponentOptions {
@@ -38,27 +36,15 @@ export class PianoString extends ToneAudioNode {
 		this.samples = options.samples;
 	}
 
-	async load(): Promise<void> {
-		// Pre-load all audio buffers using SharedAudioBuffer for caching
-		const urls: SharedBufferMap = {};
-		
-		const loadPromises = Object.entries(this._urls).map(async ([note, url]) => {
-			const fullUrl = this.samples + url;
-			const sharedBuffer = new SharedAudioBuffer(fullUrl);
-			await sharedBuffer.load();
-			urls[note] = sharedBuffer;
-		});
-
-		await Promise.all(loadPromises);
-
-		// Create sampler with pre-loaded SharedAudioBuffers
+	load(): Promise<void> {
 		return new Promise(onload => {
 			this._sampler = this.output = new Sampler({
 				attack: 0,
+				baseUrl: this.samples,
 				curve: 'exponential',
 				onload,
 				release: 0.4,
-				urls,
+				urls: this._urls,
 				volume: 3,
 			});
 		});

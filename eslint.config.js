@@ -21,9 +21,6 @@ export default [
 				console: true,
 				process: true,
 				Buffer: true,
-				AudioBuffer: true,
-				AudioContext: true,
-				fetch: true,
 			},
 		},
 		plugins: {
@@ -107,43 +104,6 @@ export default [
 				objects: 'always-multiline',
 				functions: 'never',
 			}],
-
-			// Allow unused vars that start with underscore
-			'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-		},
-	},
-	{
-		files: ['**/*.test.{js,ts}', '**/test/**/*.{js,ts}', 'vitest.config.ts'],
-		languageOptions: {
-			parser: tsParser,
-			ecmaVersion: 2017,
-			sourceType: 'module',
-			globals: {
-				Piano: true,
-				Tone: true,
-				console: true,
-				process: true,
-				Buffer: true,
-				AudioBuffer: true,
-				AudioContext: true,
-				fetch: true,
-				global: true,
-				vi: true,
-				describe: true,
-				it: true,
-				expect: true,
-				beforeEach: true,
-				afterEach: true,
-				setTimeout: true,
-			},
-		},
-		plugins: {
-			'@typescript-eslint': tsPlugin,
-			import: importPlugin,
-		},
-		rules: {
-			'no-unused-vars': 'off',
-			'@typescript-eslint/no-unused-vars': 'off',
 		},
 	},
 ];
