@@ -4,7 +4,7 @@ A web audio piano instrument
 
 ## About
 
-This is a fork of [@tonejs/piano](https://github.com/Tonejs/Piano) by Yotam Mann with performance optimizations for applications using multiple piano instances. Built on high-quality samples from [Salamander Grand Piano](https://github.com/sfztools/salamander-grand-piano).
+This is a fork of [@tonejs/piano](https://github.com/Tonejs/Piano) by Yotam Mann with performance optimizations and more active maintaince. Built on high-quality samples from [Salamander Grand Piano](https://github.com/sfztools/salamander-grand-piano).
 
 ## Features
 
