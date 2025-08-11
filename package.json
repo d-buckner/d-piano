@@ -1,6 +1,6 @@
 {
 	"name": "d-piano",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "Web Audio instrument using Salamander Grand Piano samples",
 	"repository": {
 		"url": "https://github.com/d-buckner/piano"
@@ -13,7 +13,10 @@
 		"demo": "vite --config vite.demo.config.ts",
 		"prepare": "npm run build",
 		"lint": "eslint . --ext .ts",
-		"lint:fix": "eslint . --ext .ts --fix"
+		"lint:fix": "eslint . --ext .ts --fix",
+		"test": "vitest",
+		"test:ui": "vitest --ui",
+		"test:run": "vitest run"
 	},
 	"files": [
 		"README.md",
@@ -25,13 +28,16 @@
 	"devDependencies": {
 		"@types/node": "^24.0.4",
 		"@typescript-eslint/eslint-plugin": "^8.36.0",
+		"@vitest/ui": "^3.2.4",
 		"eslint": "^9.29.0",
 		"eslint-plugin-import": "^2.32.0",
+		"happy-dom": "^18.0.1",
 		"tone": "^15.1.22",
 		"typescript": "^5.8.3",
 		"vite": "^7.0.0",
 		"vite-bundle-visualizer": "^1.2.1",
-		"vite-plugin-dts": "^4.5.4"
+		"vite-plugin-dts": "^4.5.4",
+		"vitest": "^3.2.4"
 	},
 	"peerDependencies": {
 		"tone": "^15.1.22"

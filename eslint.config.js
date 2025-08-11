@@ -21,6 +21,7 @@ export default [
         console: true,
         process: true,
         Buffer: true,
+        window: true,
       },
     },
     plugins: {
