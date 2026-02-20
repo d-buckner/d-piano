@@ -22,6 +22,14 @@ export default [
         process: true,
         Buffer: true,
         window: true,
+        setTimeout: true,
+        clearTimeout: true,
+        setInterval: true,
+        clearInterval: true,
+        fetch: true,
+        Response: true,
+        Request: true,
+        caches: true,
       },
     },
     plugins: {
@@ -41,6 +49,7 @@ export default [
       quotes: ['error', 'single'],
       'no-lonely-if': ['error'],
       semi: ['error', 'always'], // Changed to always
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
 
       // Import rules
       '@typescript-eslint/consistent-type-imports': ['error', {

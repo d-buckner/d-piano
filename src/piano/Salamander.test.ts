@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import { 
   getReleasesUrl, 
   getHarmonicsUrl, 
@@ -7,7 +8,7 @@ import {
   allNotes,
   getNotesInRange,
   getHarmonicsInRange,
-  inHarmonicsRange
+  inHarmonicsRange,
 } from './Salamander';
 
 // Mock the Util module since it depends on Tone.js
@@ -17,7 +18,7 @@ vi.mock('./Util', () => ({
     const octave = Math.floor((midi - 12) / 12);
     const noteIndex = (midi - 12) % 12;
     return `${noteNames[noteIndex]}${octave}`;
-  }
+  },
 }));
 
 describe('Salamander URL generation', () => {

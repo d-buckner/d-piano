@@ -3,506 +3,245 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multiple Piano Instances Demo</title>
+  <title>d-piano — Progressive Loading Demo</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
     body {
-      font-family: Arial, sans-serif;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f5f5f5;
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 720px;
+      margin: 48px auto;
+      padding: 0 24px;
+      background: #f8f8f8;
+      color: #1a1a1a;
     }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    .piano-container {
+
+    h1 { margin: 0 0 4px; font-size: 24px; }
+    .subtitle { color: #666; margin: 0 0 32px; font-size: 14px; }
+
+    .card {
       background: white;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
     }
-    .piano-controls {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 15px;
-    }
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
-      background-color: #007bff;
-      color: white;
+
+    .card h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #555; }
+
+    /* Config */
+    .config-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .config-row label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #555; }
+    .config-row label span { font-weight: 500; }
+    .config-row input { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 280px; outline: none; }
+    .config-row input:focus { border-color: #2563eb; }
+    .config-row select { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; outline: none; }
+    .btn { padding: 9px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background .15s; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled { background: #93c5fd; cursor: default; }
+
+    /* Phases */
+    .phases { display: flex; flex-direction: column; gap: 0; }
+    .phase { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid #f2f2f2; }
+    .phase:last-child { border-bottom: none; }
+    .dot { width: 11px; height: 11px; border-radius: 50%; background: #e0e0e0; flex-shrink: 0; transition: background .3s; }
+    .dot.waiting  { background: #e0e0e0; }
+    .dot.active   { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.2); }
+    .dot.done     { background: #22c55e; }
+    .dot.skipped  { background: #a3e635; }
+    .phase-text { flex: 1; font-size: 14px; color: #444; }
+    .phase-time { font-size: 12px; color: #999; font-family: monospace; min-width: 60px; text-align: right; }
+
+    /* Keys */
+    .keys { display: flex; gap: 6px; flex-wrap: wrap; }
+    .key {
+      padding: 11px 14px;
+      background: #f5f5f5;
+      border: 1px solid #e0e0e0;
+      border-radius: 7px;
+      font-size: 13px;
       cursor: pointer;
-      font-size: 14px;
-      transition: background-color 0.2s;
+      user-select: none;
+      transition: background .1s, transform .08s;
     }
-    button:hover {
-      background-color: #0056b3;
-    }
-    button:active {
-      transform: translateY(1px);
-    }
-    .note-button {
-      background-color: #28a745;
-    }
-    .note-button:hover {
-      background-color: #218838;
-    }
-    .chord-button {
-      background-color: #17a2b8;
-    }
-    .chord-button:hover {
-      background-color: #138496;
-    }
-    .stop-button {
-      background-color: #dc3545;
-    }
-    .stop-button:hover {
-      background-color: #c82333;
-    }
-    .status {
-      padding: 10px;
-      background-color: #f8f9fa;
-      border-radius: 4px;
-      font-size: 14px;
-      color: #666;
-    }
-    .loading {
-      color: #ffc107;
-    }
-    .ready {
-      color: #28a745;
-    }
-    .error {
-      color: #dc3545;
-    }
-    h2 {
-      margin-top: 0;
-      color: #444;
-    }
-    .demo-section {
-      margin-top: 30px;
-      padding: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .instructions {
-      background: #e9ecef;
-      padding: 15px;
-      border-radius: 4px;
-      margin-bottom: 20px;
-    }
-    .instructions h3 {
-      margin-top: 0;
-    }
-    .instructions code {
-      background: #fff;
-      padding: 2px 5px;
-      border-radius: 3px;
-      font-family: monospace;
-    }
-    .fetch-stats {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .fetch-stats h3 {
-      margin-top: 0;
-      color: #444;
-    }
-    .fetch-list {
-      max-height: 300px;
-      overflow-y: auto;
+    .key:hover:not(:disabled) { background: #ebebeb; }
+    .key:active:not(:disabled) { transform: translateY(1px); }
+    .key:disabled { opacity: .35; cursor: default; }
+    .key.playing { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+
+    /* Log */
+    .log {
+      margin-top: 16px;
       font-family: monospace;
       font-size: 12px;
-      background: #f8f9fa;
-      padding: 10px;
-      border-radius: 4px;
+      line-height: 1.6;
+      color: #555;
+      max-height: 140px;
+      overflow-y: auto;
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 6px;
+      padding: 10px 12px;
     }
-    .fetch-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 2px 0;
-      border-bottom: 1px solid #e9ecef;
-    }
-    .fetch-url {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      margin-right: 10px;
-    }
-    .fetch-count {
-      font-weight: bold;
-      color: #007bff;
-      min-width: 30px;
-      text-align: right;
-    }
-    .fetch-summary {
-      margin-top: 10px;
-      padding: 10px;
-      background: #e9ecef;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    .timing-stats {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .timing-stats h3 {
-      margin-top: 0;
-      color: #444;
-    }
-    .timing-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 5px 0;
-      border-bottom: 1px solid #e9ecef;
-    }
-    .timing-total {
-      font-weight: bold;
-      font-size: 16px;
-      color: #007bff;
-    }
+    .log:empty::before { content: 'Events will appear here…'; color: #bbb; }
+    .log-line { padding: 1px 0; }
+    .log-line.hl { color: #2563eb; font-weight: 600; }
   </style>
 </head>
 <body>
-  <h1>Multiple Piano Instances Demo</h1>
-  
-  <div class="timing-stats">
-    <h3>Loading Performance</h3>
-    <div id="timingDisplay">
-      <div style="color: #999;">Not started yet...</div>
+
+<h1>d-piano</h1>
+<p class="subtitle">Plays immediately at 1 velocity, upgrades to full quality in the background during browser idle time.</p>
+
+<div class="card">
+  <h2>Configuration</h2>
+  <div class="config-row">
+    <label>
+      <span>Sample URL</span>
+      <input id="sampleUrl" value="https://tambien.github.io/Piano/Salamander/" />
+    </label>
+    <label>
+      <span>Target velocities</span>
+      <select id="velocities">
+        <option value="1">1 — no upgrade</option>
+        <option value="4">4</option>
+        <option value="8" selected>8</option>
+        <option value="16">16</option>
+      </select>
+    </label>
+    <button class="btn btn-primary" id="loadBtn" onclick="window.initPiano()">Load Piano</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Loading progress</h2>
+  <div class="phases">
+    <div class="phase">
+      <div class="dot waiting" id="dot1"></div>
+      <div class="phase-text" id="txt1">Waiting to start</div>
+      <div class="phase-time" id="t1"></div>
+    </div>
+    <div class="phase">
+      <div class="dot waiting" id="dot2"></div>
+      <div class="phase-text" id="txt2">—</div>
+      <div class="phase-time" id="t2"></div>
     </div>
   </div>
+</div>
 
-  <div class="fetch-stats">
-    <h3>Sample Fetch Statistics</h3>
-    <div class="fetch-summary" id="fetchSummary">
-      Total fetches: 0 | Unique URLs: 0
-    </div>
-    <div class="fetch-list" id="fetchList">
-      <div style="color: #999;">No fetches yet...</div>
-    </div>
+<div class="card">
+  <h2>Play</h2>
+  <div class="keys" id="keys">
+    <button class="key" disabled data-notes="C3">C3</button>
+    <button class="key" disabled data-notes="E3">E3</button>
+    <button class="key" disabled data-notes="G3">G3</button>
+    <button class="key" disabled data-notes="C4">C4</button>
+    <button class="key" disabled data-notes="E4">E4</button>
+    <button class="key" disabled data-notes="G4">G4</button>
+    <button class="key" disabled data-notes="C5">C5</button>
+    <button class="key" disabled data-notes="E5">E5</button>
+    <button class="key" disabled data-notes="G5">G5</button>
+    <button class="key" disabled data-notes="C4,E4,G4">C major</button>
+    <button class="key" disabled data-notes="G3,B3,D4">G major</button>
+    <button class="key" disabled data-notes="A3,C4,E4">A minor</button>
+    <button class="key" disabled data-notes="F3,A3,C4">F major</button>
   </div>
+  <div class="log" id="log"></div>
+</div>
 
-  <div id="pianoContainers">
-    <!-- Piano containers will be generated dynamically -->
-  </div>
+<script src="https://unpkg.com/tone@latest/build/Tone.js"></script>
+<script type="module">
+  import { Piano } from './src/index.ts';
 
-  <div class="demo-section">
-    <h2>Combined Examples</h2>
-    <button onclick="window.playSequence()">Play Sequence (All Pianos)</button>
-    <button onclick="window.playHarmony()">Play Harmony (All Pianos)</button>
-    <button onclick="window.playArpeggio()">Play Arpeggio (All Pianos)</button>
-    <button class="stop-button" onclick="window.stopAll()">Stop All Pianos</button>
-  </div>
+  let piano = null;
+  let t0 = null;
 
-  <!-- Load Tone.js from CDN -->
-  <script src="https://unpkg.com/tone@latest/build/Tone.js"></script>
-  
-  <script type="module">
-    import { Piano } from './src/index.ts';
-    
-    // Store piano instances
-    const pianos = [];
-    const activeNotes = new Map();
-    
-    // Track fetch requests
-    const fetchStats = new Map();
-    let totalFetches = 0;
-    
-    // Track timing
-    const timingStats = {
-      startTime: null,
-      endTime: null,
-      pianoTimes: []
-    };
-    
-    // Intercept fetch to track sample requests
-    const originalFetch = window.fetch;
-    window.fetch = function(...args) {
-      const url = args[0];
-      
-      // Check if it's a sample request
-      if (typeof url === 'string' && url.includes('.ogg')) {
-        totalFetches++;
-        const currentCount = fetchStats.get(url) || 0;
-        fetchStats.set(url, currentCount + 1);
-        updateFetchDisplay();
-      }
-      
-      return originalFetch.apply(this, args);
-    };
-    
-    // Update the fetch display
-    function updateFetchDisplay() {
-      const summaryEl = document.getElementById('fetchSummary');
-      const listEl = document.getElementById('fetchList');
-      
-      summaryEl.textContent = `Total fetches: ${totalFetches} | Unique URLs: ${fetchStats.size}`;
-      
-      // Sort by count (descending) and then by URL
-      const sorted = Array.from(fetchStats.entries())
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-      
-      listEl.innerHTML = sorted.map(([url, count]) => {
-        const filename = url.split('/').pop();
-        return `
-          <div class="fetch-item">
-            <div class="fetch-url" title="${url}">${filename}</div>
-            <div class="fetch-count">${count}x</div>
-          </div>
-        `;
-      }).join('');
-    }
-    
-    // Update timing display
-    function updateTimingDisplay() {
-      const timingEl = document.getElementById('timingDisplay');
-      
-      if (!timingStats.startTime) {
-        timingEl.innerHTML = '<div style="color: #999;">Not started yet...</div>';
-        return;
-      }
-      
-      const currentTime = timingStats.endTime || Date.now();
-      const totalTime = currentTime - timingStats.startTime;
-      
-      let html = '';
-      
-      // Show individual piano loading times
-      timingStats.pianoTimes.forEach((time, index) => {
-        html += `
-          <div class="timing-item">
-            <span>Piano ${index + 1}</span>
-            <span>${time}ms</span>
-          </div>
-        `;
-      });
-      
-      // Show total time
-      if (timingStats.endTime) {
-        html += `
-          <div class="timing-item timing-total">
-            <span>Total Loading Time</span>
-            <span>${totalTime}ms</span>
-          </div>
-        `;
-      } else {
-        html += `
-          <div class="timing-item">
-            <span>Loading in progress...</span>
-            <span>${totalTime}ms</span>
-          </div>
-        `;
-      }
-      
-      timingEl.innerHTML = html;
-    }
+  function elapsed() {
+    return t0 ? `+${Date.now() - t0}ms` : '';
+  }
 
-    // Create piano UI containers
-    function createPianoContainers() {
-      const container = document.getElementById('pianoContainers');
-      
-      for (let i = 0; i < 10; i++) {
-        const octave = 3 + (i % 3); // Cycle through octaves 3, 4, 5
-        const pianoDiv = document.createElement('div');
-        pianoDiv.className = 'piano-container';
-        pianoDiv.innerHTML = `
-          <h2>Piano ${i + 1} - Octave ${octave}</h2>
-          <div class="status" id="status${i + 1}">Initializing...</div>
-          <div class="piano-controls">
-            <button class="note-button" onclick="window.playNote(${i}, 'C${octave}')">Play C${octave}</button>
-            <button class="note-button" onclick="window.playNote(${i}, 'E${octave}')">Play E${octave}</button>
-            <button class="note-button" onclick="window.playNote(${i}, 'G${octave}')">Play G${octave}</button>
-            <button class="chord-button" onclick="window.playChord(${i}, ['C${octave}', 'E${octave}', 'G${octave}'])">Play C Major</button>
-            <button class="stop-button" onclick="window.stopPiano(${i})">Stop All</button>
-          </div>
-        `;
-        container.appendChild(pianoDiv);
-      }
-    }
+  function log(msg, highlight = false) {
+    const el = document.getElementById('log');
+    const line = document.createElement('div');
+    line.className = 'log-line' + (highlight ? ' hl' : '');
+    line.textContent = `${elapsed().padEnd(9)} ${msg}`;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  }
 
-    // Initialize pianos
-    async function initPianos() {
-      try {
-        // Create UI containers first
-        createPianoContainers();
-        
-        // Start timing
-        timingStats.startTime = Date.now();
-        updateTimingDisplay();
-        
-        // Update display every 100ms during loading
-        const timingInterval = setInterval(updateTimingDisplay, 100);
+  function setPhase(n, state, text, time) {
+    document.getElementById(`dot${n}`).className = `dot ${state}`;
+    document.getElementById(`txt${n}`).textContent = text;
+    if (time != null) document.getElementById(`t${n}`).textContent = `${time}ms`;
+  }
 
-        // Create 10 piano instances
-        for (let i = 0; i < 10; i++) {
-          const pianoStartTime = Date.now();
-          
-          const piano = new Piano({
-            velocities: 16,
-            release: true, // Enable harmonics and keybed
-            volume: {
-              strings: -12,
-              pedal: -12,
-              keybed: -12,
-              harmonics: -12
-            }
-          }).toDestination();
-          
-          pianos.push(piano);
-          
-          // Update status
-          const statusEl = document.getElementById(`status${i + 1}`);
-          statusEl.textContent = 'Loading samples...';
-          statusEl.className = 'status loading';
-          
-          // Load samples
-          await piano.load();
-          
-          // Record piano loading time
-          const pianoEndTime = Date.now();
-          timingStats.pianoTimes.push(pianoEndTime - pianoStartTime);
-          
-          statusEl.textContent = 'Ready!';
-          statusEl.className = 'status ready';
+  // Wire up play keys
+  document.getElementById('keys').addEventListener('click', async e => {
+    const key = e.target.closest('.key');
+    if (!key || key.disabled || !piano) return;
+    await Tone.start();
+
+    const notes = key.dataset.notes.split(',');
+    notes.forEach(note => piano.keyDown({ note, velocity: 0.8 }));
+    key.classList.add('playing');
+
+    setTimeout(() => {
+      notes.forEach(note => piano.keyUp({ note }));
+      key.classList.remove('playing');
+    }, 1500);
+  });
+
+  window.initPiano = async function () {
+    const url = document.getElementById('sampleUrl').value.trim();
+    const velocities = parseInt(document.getElementById('velocities').value);
+
+    if (!url) { alert('Enter a sample URL first.'); return; }
+
+    document.getElementById('loadBtn').disabled = true;
+    document.getElementById('log').innerHTML = '';
+    document.querySelectorAll('.key').forEach(k => k.disabled = true);
+    t0 = Date.now();
+
+    const phase2Label = velocities > 1
+      ? `Upgrade to ${velocities} velocities (background)`
+      : 'No upgrade needed (velocities = 1)';
+
+    setPhase(1, 'active', 'Loading first pass (1 velocity)…', null);
+    setPhase(2, 'waiting', phase2Label, null);
+    log('Piano created');
+
+    piano = new Piano({
+      url,
+      velocities,
+      onLoadProgress: (progress) => {
+        const current = Math.round(progress * velocities);
+        if (progress < 1) {
+          setPhase(2, 'active', `Loading velocities… (${current}/${velocities})`, null);
+          log(`Velocity progress: ${current}/${velocities}`);
+          return;
         }
-        
-        // End timing
-        timingStats.endTime = Date.now();
-        clearInterval(timingInterval);
-        updateTimingDisplay();
-        
-        console.log('All pianos loaded successfully!');
-      } catch (error) {
-        console.error('Error loading pianos:', error);
-        document.querySelectorAll('.status').forEach(el => {
-          el.textContent = 'Error: ' + error.message;
-          el.className = 'status error';
-        });
-      }
+        setPhase(2, 'done', `${velocities} velocities ready`, Date.now() - t0);
+        log(`Background upgrade complete — now at full quality (${velocities} vel)`, true);
+      },
+    }).toDestination();
+
+    await piano.load();
+
+    const ms = Date.now() - t0;
+    setPhase(1, 'done', 'First pass ready — playable now (1 velocity)', ms);
+    log(`First pass ready — piano is playable`, true);
+
+    if (velocities > 1) {
+      setPhase(2, 'active', `Upgrading to ${velocities} velocities in background…`, null);
+      log('Upgrade scheduled via requestIdleCallback');
+    } else {
+      setPhase(2, 'skipped', 'No upgrade (velocities = 1)', null);
     }
 
-    // Play a single note
-    window.playNote = async function(pianoIndex, note) {
-      if (!pianos[pianoIndex]) {
-        console.error('Piano not initialized');
-        return;
-      }
-      
-      await Tone.start();
-      pianos[pianoIndex].keyDown({ note, velocity: 0.8 });
-      
-      // Store active note
-      const key = `${pianoIndex}-${note}`;
-      activeNotes.set(key, true);
-      
-      // Auto-release after 2 seconds
-      setTimeout(() => {
-        if (activeNotes.get(key)) {
-          stopNote(pianoIndex, note);
-        }
-      }, 2000);
-    }
-
-    // Stop a single note
-    window.stopNote = function(pianoIndex, note) {
-      if (!pianos[pianoIndex]) return;
-      
-      pianos[pianoIndex].keyUp({ note });
-      activeNotes.delete(`${pianoIndex}-${note}`);
-    }
-
-    // Play a chord
-    window.playChord = async function(pianoIndex, notes) {
-      await Tone.start();
-      notes.forEach(note => window.playNote(pianoIndex, note));
-    }
-
-    // Stop all notes on a piano
-    window.stopPiano = function(pianoIndex) {
-      if (!pianos[pianoIndex]) return;
-      
-      pianos[pianoIndex].stopAll();
-      
-      // Clear active notes for this piano
-      for (const [key] of activeNotes) {
-        if (key.startsWith(`${pianoIndex}-`)) {
-          activeNotes.delete(key);
-        }
-      }
-    }
-
-    // Stop all pianos
-    window.stopAll = function() {
-      pianos.forEach((piano, index) => window.stopPiano(index));
-    }
-
-    // Play a sequence across all pianos
-    window.playSequence = async function() {
-      await Tone.start();
-      window.stopAll();
-      
-      const sequence = [
-        { piano: 0, note: 'C4', delay: 0 },
-        { piano: 1, note: 'E5', delay: 200 },
-        { piano: 2, note: 'G3', delay: 400 },
-        { piano: 0, note: 'A4', delay: 600 },
-        { piano: 1, note: 'C5', delay: 800 },
-        { piano: 2, note: 'F3', delay: 1000 },
-      ];
-      
-      sequence.forEach(({ piano, note, delay }) => {
-        setTimeout(() => window.playNote(piano, note), delay);
-      });
-    }
-
-    // Play harmony across all pianos
-    window.playHarmony = async function() {
-      await Tone.start();
-      window.stopAll();
-      
-      // Play a C major chord spread across pianos
-      window.playNote(2, 'C3'); // Bass
-      window.playNote(0, 'E4'); // Middle
-      window.playNote(0, 'G4'); // Middle
-      window.playNote(1, 'C5'); // High
-      window.playNote(1, 'E5'); // High
-    }
-
-    // Play an arpeggio across all pianos
-    window.playArpeggio = async function() {
-      await Tone.start();
-      window.stopAll();
-      
-      const notes = [
-        { piano: 2, note: 'C3' },
-        { piano: 2, note: 'E3' },
-        { piano: 0, note: 'G4' },
-        { piano: 0, note: 'C4' },
-        { piano: 1, note: 'E5' },
-        { piano: 1, note: 'G5' },
-        { piano: 1, note: 'C6' },
-      ];
-      
-      notes.forEach(({ piano, note }, index) => {
-        setTimeout(() => window.playNote(piano, note), index * 150);
-      });
-    }
-
-    // Initialize on load
-    window.addEventListener('load', initPianos);
-  </script>
+    document.querySelectorAll('.key').forEach(k => k.disabled = false);
+    document.getElementById('loadBtn').disabled = false;
+  };
+</script>
 </body>
 </html>

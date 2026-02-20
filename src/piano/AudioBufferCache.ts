@@ -3,6 +3,9 @@ import { ToneAudioBuffer, ToneAudioBuffers } from 'tone';
 import type { UrlsMap } from './Component';
 
 
+export const PIANO_CACHE_NAME = 'd-piano-samples';
+
+
 interface BufferMap {
   [note: string]: ToneAudioBuffer,
 }
@@ -43,8 +46,6 @@ export default class AudioBufferCache {
   }
 
   public static getBuffer(url: string): Promise<ToneAudioBuffer> {
-    // TODO: we can limit concurrent downloads to prevent overwhelm for applications that
-    // have may other fetches going on
     const cacheItem = AudioBufferCache.cache[url];
     if (!cacheItem) {
       const loadingBuffer = ToneAudioBuffer.fromUrl(url);

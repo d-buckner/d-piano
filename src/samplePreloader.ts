@@ -5,6 +5,7 @@
 
 import { allNotes, getNotesInRange, velocitiesMap } from './piano/Salamander';
 import { midiToNoteString } from './midiUtils';
+import { PIANO_CACHE_NAME } from './piano/AudioBufferCache';
 
 
 export interface PreloadOptions {
@@ -44,7 +45,7 @@ function getNotesUrlToneFree(midi: number, vel: number): string {
 }
 
 /**
- * Generate harmonics sample URL without using Tone.js  
+ * Generate harmonics sample URL without using Tone.js
  * Reimplements getHarmonicsUrl from Salamander.ts using midiUtils
  */
 function getHarmonicsUrlToneFree(midi: number): string {
@@ -61,14 +62,15 @@ function getReleasesUrlToneFree(midi: number): string {
 }
 
 /**
- * Preload piano samples by fetching them (relies on service worker for caching)
+ * Preload piano samples into the Cache Storage API.
+ * Skips URLs already present in the cache.
  */
 export async function preloadSamples(
   velocities: number,
   options: PreloadOptions = {}
 ): Promise<void> {
   const {
-    baseUrl = 'https://tambien.github.io/Piano/audio/',
+    baseUrl = 'https://tambien.github.io/Piano/Salamander/',
     minNote = 21,
     maxNote = 108,
     includeHarmonics = false,
@@ -76,35 +78,25 @@ export async function preloadSamples(
     includeRelease = false,
   } = options;
 
-  // Ensure baseUrl ends with /
   const samplesUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-
-  // Get velocity levels to fetch
   const velocityLevels = velocitiesMap[velocities] || [8];
-  
-  // Get notes in range that have samples
   const notesToLoad = getNotesInRange(minNote, maxNote);
-  
-  // Build list of URLs to preload
+
   const urlsToFetch: string[] = [];
 
-  // Add note samples for each velocity
   for (const midi of notesToLoad) {
     for (const vel of velocityLevels) {
       urlsToFetch.push(samplesUrl + getNotesUrlToneFree(midi, vel));
     }
   }
 
-  // Add harmonics if requested
   if (includeHarmonics) {
-    // Harmonics range is limited - reuse existing logic
     const harmonicsNotes = allNotes.filter(note => note >= 21 && note <= 87);
     for (const midi of harmonicsNotes) {
       urlsToFetch.push(samplesUrl + getHarmonicsUrlToneFree(midi));
     }
   }
 
-  // Add pedal samples if requested
   if (includePedal) {
     urlsToFetch.push(samplesUrl + 'pedalD1.ogg');
     urlsToFetch.push(samplesUrl + 'pedalD2.ogg');
@@ -112,19 +104,31 @@ export async function preloadSamples(
     urlsToFetch.push(samplesUrl + 'pedalU2.ogg');
   }
 
-  // Add release samples if requested
   if (includeRelease) {
     for (const midi of notesToLoad) {
       urlsToFetch.push(samplesUrl + getReleasesUrlToneFree(midi));
     }
   }
 
-  // Fetch all URLs (service worker will cache them)
-  const fetchPromises = urlsToFetch.map(url => 
-    window.fetch(url).catch((e) => {
-      console.error(e);
-    })
-  );
+  if (typeof window === 'undefined' || !window.caches) {
+    return; 
+  }
 
-  await Promise.allSettled(fetchPromises);
+  const cache = await caches.open(PIANO_CACHE_NAME);
+
+  await Promise.allSettled(urlsToFetch.map(async url => {
+    const existing = await cache.match(url);
+    if (existing) {
+      return; 
+    }
+
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        await cache.put(url, response);
+      }
+    } catch {
+      // individual fetch failures are non-fatal
+    }
+  }));
 }

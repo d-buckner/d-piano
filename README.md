@@ -10,7 +10,9 @@ This is a fork of [@tonejs/piano](https://github.com/Tonejs/Piano) by Yotam Mann
 
 - **High-quality samples** - Up to 16 velocity levels across 88 keys (Yamaha C5)
 - **Complete instrument** - Includes pedal sounds and string harmonics
-- **Buffer caching** - Audio buffers are cached and shared across multiple piano instances
+- **Progressive loading** - Loads 1 velocity level immediately for fast startup, then upgrades to full quality in the background during browser idle time
+- **Cache-aware** - Probes the Cache Storage API at startup; if target-quality samples are already cached, starts at full quality immediately rather than the single-velocity warm-up pass
+- **Buffer caching** - Audio buffers are shared across multiple piano instances and across progressive upgrade steps — no re-fetching
 
 ## Install
 
@@ -37,37 +39,47 @@ import { Piano } from 'd-piano'
 ### Create and load samples
 
 ```javascript
-// create the piano and load 5 velocity steps
+// Create the piano — progressive loading is automatic
 const piano = new Piano({
-	velocities: 5
+	velocities: 8  // target quality; default is 8
 })
 
-// connect it to the speaker output
+// Connect to speaker output
 piano.toDestination()
 
-// load all samples (returns a promise)
+// Resolves as soon as the first pass (1 velocity) is ready to play.
+// Upgrading to full quality happens automatically in the background.
 piano.load().then(() => {
-	console.log('Piano loaded!')
+	console.log('Piano ready — playing at 1 velocity, upgrading in background')
 })
 ```
 
-### Multiple Piano Instances (Optimized)
+### How progressive loading works
 
-The enhanced caching system makes creating multiple pianos efficient:
+`load()` resolves after a fast first pass (1 velocity layer) so you can start playing immediately. The upgrade to the target velocity count happens in the background via `requestIdleCallback`, expanding the velocity layers in-place without interrupting notes that are already playing.
+
+If the target samples are already in the Cache Storage API, the piano starts at full quality immediately instead of going through the single-velocity warm-up pass first. This pairs well with `preloadSamples` and any service worker caching strategy in your own app.
+
+```
+Cold load (nothing cached):
+  load() resolves → playing at 1 velocity
+  [idle] → upgrades to 8 velocities in-place, no interruption
+
+Warm load (samples cached):
+  load() resolves → playing at 8 velocities immediately
+```
+
+### Preloading samples
+
+Use `preloadSamples` to fetch samples ahead of time without importing the full Tone.js piano. Combined with a service worker caching strategy in your app, this means `Piano` will detect the cached samples on the next load and start at full quality immediately.
 
 ```javascript
-// Create multiple piano instances - audio buffers are shared automatically
-const piano1 = new Piano({ velocities: 3 })
-const piano2 = new Piano({ velocities: 5 })
-const piano3 = new Piano({ velocities: 1 })
+import { preloadSamples } from 'd-piano'
 
-// Load all pianos - samples are fetched only once and shared
-Promise.all([
-	piano1.load(),
-	piano2.load(), 
-	piano3.load()
-]).then(() => {
-	console.log('All pianos loaded with optimized caching!')
+await preloadSamples(8, {
+	baseUrl: '/assets/samples/piano/',
+	minNote: 21,
+	maxNote: 108,
 })
 ```
 
@@ -77,12 +89,13 @@ Promise.all([
 
 ```typescript
 interface PianoOptions {
-	velocities: number;    // Number of velocity steps to load (default: 1, max: 16)
+	velocities: number;    // Target velocity levels (default: 8, max: 16). Progressive
+	                       // loading starts at 1 and upgrades to this in the background.
 	minNote: number;       // Lowest MIDI note to load (default: 21)
 	maxNote: number;       // Highest MIDI note to load (default: 108)
 	release: boolean;      // Include release sounds (default: false)
 	pedal: boolean;        // Include pedal sounds (default: true)
-	url: string;           // Custom sample URL (optional)
+	url: string;           // Sample directory URL
 	maxPolyphony: number;  // Max simultaneous notes (default: 32)
 	volume: {              // Component volume levels in dB (default: 0)
 		pedal: number;
@@ -126,7 +139,11 @@ Release the sustain pedal and dampen any sustained notes.
 
 #### `.load(): Promise<void>`
 
-Load all audio samples. Returns a promise that resolves when loading is complete.
+Start loading samples. Resolves as soon as the first velocity pass is ready to play. The upgrade to full velocity resolution continues in the background and requires no further interaction.
+
+#### `.loaded: boolean`
+
+`true` once the first velocity pass has finished loading and the piano is ready to play.
 
 #### `.dispose()`
 

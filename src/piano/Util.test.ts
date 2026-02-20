@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+
 import { randomBetween, noteToMidi, midiToNote } from './Util';
 
 // Mock Tone.js Frequency since we want to test our functions, not Tone.js
@@ -10,23 +11,23 @@ vi.mock('tone', () => ({
       const octave = Math.floor((value - 12) / 12);
       const noteIndex = (value - 12) % 12;
       return {
-        toNote: () => `${noteNames[noteIndex]}${octave}`
+        toNote: () => `${noteNames[noteIndex]}${octave}`,
       };
     } else {
       // Mock note to MIDI conversion - simplified implementation
       const noteMap: Record<string, number> = {
-        'C4': 60,
-        'A4': 69,
+        C4: 60,
+        A4: 69,
         'C#4': 61,
         'F#4': 66,
-        'A0': 21,
-        'C8': 108
+        A0: 21,
+        C8: 108,
       };
       return {
-        toMidi: () => noteMap[value] || 60 // Default to middle C if not found
+        toMidi: () => noteMap[value] || 60, // Default to middle C if not found
       };
     }
-  })
+  }),
 }));
 
 describe('randomBetween', () => {
@@ -98,11 +99,11 @@ describe('randomBetween', () => {
       const results = [];
       const low = 0;
       const high = 1000;
-      
+
       for (let i = 0; i < 10; i++) {
         results.push(randomBetween(low, high));
       }
-      
+
       // With a range of 1000, we should get different values
       const uniqueResults = new Set(results);
       expect(uniqueResults.size).toBeGreaterThan(1);
@@ -111,16 +112,16 @@ describe('randomBetween', () => {
     it('maintains mathematical relationship: result = low + Math.random() * (high - low)', () => {
       const low = 5;
       const high = 15;
-      
+
       // Mock Math.random to test the exact formula
       const originalRandom = Math.random;
       Math.random = vi.fn(() => 0.5);
-      
+
       const result = randomBetween(low, high);
       const expected = low + 0.5 * (high - low);
-      
+
       expect(result).toBe(expected);
-      
+
       // Restore original Math.random
       Math.random = originalRandom;
     });
@@ -130,7 +131,7 @@ describe('randomBetween', () => {
     it('works correctly when low > high (swapped parameters)', () => {
       // The function doesn't validate input order, so this tests actual behavior
       const result = randomBetween(20, 10);
-      
+
       // This will produce negative numbers since (high - low) is negative
       expect(result).toBeLessThanOrEqual(20);
     });

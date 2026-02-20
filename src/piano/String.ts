@@ -6,7 +6,7 @@ import AudioBufferCache from './AudioBufferCache';
 import type { PianoComponentOptions, UrlsMap } from './Component';
 
 
-interface PianoStringOptions extends PianoComponentOptions {
+export interface PianoStringOptions extends PianoComponentOptions {
 	notes: number[]
 	velocity: number
 }
@@ -28,8 +28,12 @@ export class PianoString extends ToneAudioNode {
 
   readonly samples: string;
 
+  readonly velocity: number;
+
   constructor(options: PianoStringOptions) {
     super(options);
+
+    this.velocity = options.velocity;
 
     // create the urls
     options.notes.forEach(note => this._urls[note] = getNotesUrl(note, options.velocity));

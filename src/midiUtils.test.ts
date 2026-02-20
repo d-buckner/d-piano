@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
+
 import { midiToNoteString } from './midiUtils';
+
 
 describe('midiToNoteString', () => {
   describe('standard piano notes', () => {
@@ -33,7 +35,7 @@ describe('midiToNoteString', () => {
       { midi: 68, note: 'Gs4' },
       { midi: 69, note: 'A4' },
       { midi: 70, note: 'As4' },
-      { midi: 71, note: 'B4' }
+      { midi: 71, note: 'B4' },
     ];
 
     expectedNotes.forEach(({ midi, note }) => {
@@ -67,13 +69,13 @@ describe('midiToNoteString', () => {
 
   describe('extended MIDI range', () => {
     it('handles notes below piano range', () => {
-      expect(midiToNoteString(12)).toBe('C0');  // Below A0
+      expect(midiToNoteString(12)).toBe('C0'); // Below A0
       expect(midiToNoteString(20)).toBe('Gs0'); // Just below A0
     });
 
     it('handles notes above piano range', () => {
       expect(midiToNoteString(109)).toBe('Cs8'); // Just above C8
-      expect(midiToNoteString(127)).toBe('G9');  // MIDI max
+      expect(midiToNoteString(127)).toBe('G9'); // MIDI max
     });
   });
 
@@ -84,7 +86,7 @@ describe('midiToNoteString', () => {
         { midi: 63, expected: 'Ds4' }, // D#
         { midi: 66, expected: 'Fs4' }, // F#
         { midi: 68, expected: 'Gs4' }, // G#
-        { midi: 70, expected: 'As4' }  // A#
+        { midi: 70, expected: 'As4' }, // A#
       ];
 
       sharpNotes.forEach(({ midi, expected }) => {
@@ -118,8 +120,8 @@ describe('midiToNoteString', () => {
 
   describe('practical validation', () => {
     it('handles full 88-key piano range correctly', () => {
-      expect(midiToNoteString(21)).toBe('A0');   // Lowest piano key
-      expect(midiToNoteString(108)).toBe('C8');  // Highest piano key
+      expect(midiToNoteString(21)).toBe('A0'); // Lowest piano key
+      expect(midiToNoteString(108)).toBe('C8'); // Highest piano key
     });
 
     it('produces consistent results for repeated calls', () => {

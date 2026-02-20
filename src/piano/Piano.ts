@@ -1,70 +1,97 @@
 import {
-  Gain, isString,
-  Midi, optionsFromArguments,
+  Gain,
+  optionsFromArguments,
   ToneAudioNode,
 } from 'tone';
 
-import { Harmonics } from './Harmonics';
-import { Keybed } from './Keybed';
-import { Pedal } from './Pedal';
-import { PianoStrings } from './Strings';
+import { PianoSampler } from './PianoSampler';
+import { getNotesUrl, velocitiesMap } from './Salamander';
 
-import type { ToneAudioNodeOptions, Param, Unit } from 'tone';
+import type { ToneAudioNodeOptions, Unit } from 'tone';
 
-
-export interface PianoOptions extends ToneAudioNodeOptions {
-	/**
-	 * The number of velocity steps to load
-	 */
-	velocities: number,
-	/**
-	 * The lowest note to load
-	 */
-	minNote: number,
-	/**
-	 * The highest note to load
-	 */
-	maxNote: number,
-	/**
-	 * If it should include a 'release' sounds composed of a keyclick and string harmonic
-	 */
-	release: boolean,
-	/**
-	 * If the piano should include a 'pedal' sound.
-	 */
-	pedal: boolean,
-	/**
-	 * The directory of the salamander grand piano samples
-	 */
-	url: string,
-	/**
-	 * The maximum number of notes that can be held at once
-	 */
-	maxPolyphony: number,
-	/**
-	 * Volume levels for each of the components (in decibels)
-	 */
-	volume: {
-		pedal: number,
-		strings: number,
-		keybed: number,
-		harmonics: number,
-	}
-}
 
 interface KeyEvent {
-	time?: Unit.Time;
-	velocity?: number;
-	note?: string;
-	midi?: number;
+  time?: Unit.Time;
+  velocity?: number;
+  note?: string;
+  midi?: number;
 }
 
 interface PedalEvent {
-	time?: Unit.Time;
+  time?: Unit.Time;
 }
 
+export interface PianoOptions extends ToneAudioNodeOptions {
+  /**
+   * The maximum number of velocity levels to load. Progressive loading starts
+   * with 1 velocity and upgrades to this target during browser idle time.
+   * Default: 8.
+   */
+  velocities?: number;
+  /**
+   * The lowest note to load
+   */
+  minNote?: number;
+  /**
+   * The highest note to load
+   */
+  maxNote?: number;
+  /**
+   * If it should include a 'release' sounds composed of a keyclick and string harmonic
+   */
+  release?: boolean;
+  /**
+   * If the piano should include a 'pedal' sound.
+   */
+  pedal?: boolean;
+  /**
+   * The directory of the salamander grand piano samples
+   */
+  url?: string;
+  /**
+   * The maximum number of notes that can be held at once
+   */
+  maxPolyphony?: number;
+  /**
+   * Volume levels for each of the components (in decibels)
+   */
+  volume?: {
+    pedal: number;
+    strings: number;
+    keybed: number;
+    harmonics: number;
+  };
+  /**
+   * Called once when the piano is first ready to play (after the initial velocity pass loads).
+   */
+  onPlayable?: () => void;
+  /**
+   * Called after each velocity loading step with a normalized progress value (0–1).
+   * Fires after the initial load and after each background expansion step.
+   * Progress reaches 1.0 when all target velocities are loaded.
+   */
+  onLoadProgress?: (_progress: number) => void;
+}
+
+type PianoSamplerConfig = {
+  minNote: number;
+  maxNote: number;
+  release: boolean;
+  pedal: boolean;
+  url: string;
+  maxPolyphony: number;
+  volume: {
+    pedal: number;
+    strings: number;
+    keybed: number;
+    harmonics: number;
+  };
+};
+
 /**
- *  The Piano
+ * A progressive, cache-aware piano that upgrades velocity resolution in the background.
+ * Loads a fast first pass immediately, then upgrades during browser idle time.
+ * If samples are already cached, starts at the highest cached quality automatically.
  */
 export class Piano extends ToneAudioNode<PianoOptions> {
 
@@ -74,65 +101,19 @@ export class Piano extends ToneAudioNode<PianoOptions> {
 
   readonly output = new Gain({ context: this.context });
 
-  /**
-	 * The string harmonics
-	 */
-  private _harmonics: Harmonics;
+  private _sampler?: PianoSampler;
 
-  /**
-	 * The keybed release sound
-	 */
-  private _keybed: Keybed;
+  private _velocities: number;
 
-  /**
-	 * The pedal
-	 */
-  private _pedal: Pedal;
+  private _url: string;
 
-  /**
-	 * The strings
-	 */
-  private _strings: PianoStrings;
+  private _samplerConfig: PianoSamplerConfig;
 
-  /**
-	 * The volume level of the strings output. This is the main piano sound.
-	 */
-  strings: Param<'decibels'>;
+  private _onPlayable?: () => void;
 
-  /**
-	 * The volume output of the pedal up and down sounds
-	 */
-  pedal: Param<'decibels'>;
+  private _onLoadProgress?: (_progress: number) => void;
 
-  /**
-	 * The volume of the string harmonics
-	 */
-  harmonics: Param<'decibels'>;
-
-  /**
-	 * The volume of the keybed click sound
-	 */
-  keybed: Param<'decibels'>;
-
-  /**
-	 * The maximum number of notes which can be held at once
-	 */
-  maxPolyphony: number;
-
-  /**
-	 * The sustained notes
-	 */
-  private _sustainedNotes: Map<number, any>;
-
-  /**
-	 * The currently held notes
-	 */
-  private _heldNotes: Map<number, any> = new Map();
-
-  /**
-	 * If it's loaded or not
-	 */
-  private _loaded: boolean = false;
+  private _loaded = false;
 
   // eslint-disable-next-line no-unused-vars
   constructor(options?: Partial<PianoOptions>);
@@ -142,191 +123,164 @@ export class Piano extends ToneAudioNode<PianoOptions> {
 
     const options = optionsFromArguments(Piano.getDefaults(), arguments);
 
-    // make sure it ends with a /
     if (!options.url.endsWith('/')) {
       options.url += '/';
     }
-    this.maxPolyphony = options.maxPolyphony;
-    this._heldNotes = new Map();
 
-    this._sustainedNotes = new Map();
-
-    this._strings = new PianoStrings(Object.assign({}, options, {
-      enabled: true,
-      samples: options.url,
-      volume: options.volume.strings,
-    })).connect(this.output);
-    this.strings = this._strings.volume;
-
-    this._pedal = new Pedal(Object.assign({}, options, {
-      enabled: options.pedal,
-      samples: options.url,
-      volume: options.volume.pedal,
-    })).connect(this.output);
-    this.pedal = this._pedal.volume;
-
-    this._keybed = new Keybed(Object.assign({}, options, {
-      enabled: options.release,
-      samples: options.url,
-      volume: options.volume.keybed,
-    })).connect(this.output);
-    this.keybed = this._keybed.volume;
-
-    this._harmonics = new Harmonics(Object.assign({}, options, {
-      enabled: options.release,
-      samples: options.url,
-      volume: options.volume.harmonics,
-    })).connect(this.output);
-    this.harmonics = this._harmonics.volume;
+    this._velocities = options.velocities;
+    this._url = options.url;
+    this._onPlayable = options.onPlayable;
+    this._onLoadProgress = options.onLoadProgress;
+    this._samplerConfig = {
+      minNote: options.minNote,
+      maxNote: options.maxNote,
+      release: options.release,
+      pedal: options.pedal,
+      url: options.url,
+      maxPolyphony: options.maxPolyphony,
+      volume: options.volume,
+    };
   }
 
-  static getDefaults(): PianoOptions {
+  static getDefaults(): Required<PianoOptions> {
     return Object.assign(ToneAudioNode.getDefaults(), {
+      velocities: 8,
       maxNote: 108,
       maxPolyphony: 32,
       minNote: 21,
+      onPlayable: undefined,
+      onLoadProgress: undefined,
       pedal: true,
       release: false,
-      url: 'https://tambien.github.io/Piano/audio/',
-      velocities: 1,
+      url: 'https://tambien.github.io/Piano/Salamander/',
       volume: {
         harmonics: 0,
         keybed: 0,
         pedal: 0,
         strings: 0,
       },
-    });
+    }) as unknown as Required<PianoOptions>;
   }
 
   /**
-	 *  Load all the samples
-	 */
+   * Load samples. Detects cached samples and starts from the best cached quality.
+   * Resolves after the first sampler is ready; upgrades continue in the background.
+   */
   async load(): Promise<void> {
-    await Promise.all([
-      this._strings.load(),
-      this._pedal.load(),
-      this._keybed.load(),
-      this._harmonics.load(),
-    ]);
+    const startVelocities = await this._detectStartVelocities();
+    const sampler = new PianoSampler({
+      ...this._samplerConfig,
+      velocities: startVelocities,
+      context: this.context,
+    });
+
+    await sampler.load();
+    sampler.connect(this.output);
+    this._sampler = sampler;
     this._loaded = true;
+    this._onPlayable?.();
+    this._onLoadProgress?.(startVelocities / this._velocities);
+
+    if (startVelocities < this._velocities) {
+      void this._expandInBackground(startVelocities);
+    }
   }
 
   /**
-	 * If all the samples are loaded or not
-	 */
+   * If the first velocity pass is loaded and ready to play
+   */
   get loaded(): boolean {
     return this._loaded;
   }
 
   /**
-	 *  Put the pedal down at the given time. Causes subsequent
-	 *  notes and currently held notes to sustain.
-	 */
-  pedalDown({ time = this.immediate() }: PedalEvent = {}): this {
-
-    if (this.loaded) {
-      time = this.toSeconds(time);
-      if (!this._pedal.isDown(time)) {
-        this._pedal.down(time);
-      }
-    }
+   * Play a note.
+   */
+  keyDown(event: KeyEvent): this {
+    this._sampler?.keyDown(event);
     return this;
   }
 
   /**
-	 *  Put the pedal up. Dampens sustained notes
-	 */
-  pedalUp({ time = this.immediate() }: PedalEvent = {}): this {
-
-    if (this.loaded) {
-      const seconds = this.toSeconds(time);
-      if (this._pedal.isDown(seconds)) {
-        this._pedal.up(seconds);
-        // dampen each of the notes
-        this._sustainedNotes.forEach((t, note) => {
-          if (!this._heldNotes.has(note)) {
-            this._strings.triggerRelease(note, seconds);
-          }
-        });
-        this._sustainedNotes.clear();
-      }
-    }
+   * Release a held note.
+   */
+  keyUp(event: KeyEvent): this {
+    this._sampler?.keyUp(event);
     return this;
   }
 
   /**
-	 *  Play a note.
-	 *  @param note	  The note to play. If it is a number, it is assumed to be MIDI
-	 *  @param velocity  The velocity to play the note
-	 *  @param time	  The time of the event
-	 */
-  keyDown({ note, midi, time = this.immediate(), velocity = 0.8 }: KeyEvent): this {
-    if (this.loaded && this.maxPolyphony > this._heldNotes.size + this._sustainedNotes.size) {
-
-      time = this.toSeconds(time);
-
-      if (isString(note)) {
-        midi = Math.round(Midi(note).toMidi());
-      }
-
-      if (!this._heldNotes.has(midi)) {
-        // record the start time and velocity
-        this._heldNotes.set(midi, { time, velocity });
-
-        this._strings.triggerAttack(midi, time, velocity);
-      }
-    } else {
-      console.warn('samples not loaded');
-    }
+   * Put the pedal down. Causes subsequent notes and currently held notes to sustain.
+   */
+  pedalDown(event: PedalEvent = {}): this {
+    this._sampler?.pedalDown(event);
     return this;
   }
 
   /**
-	 *  Release a held note.
-	 */
-  keyUp({ note, midi, time = this.immediate(), velocity = 0.8 }: KeyEvent): this {
-    if (this.loaded) {
-      time = this.toSeconds(time);
-
-      if (isString(note)) {
-        midi = Math.round(Midi(note).toMidi());
-      }
-
-      if (this._heldNotes.has(midi)) {
-
-        const prevNote = this._heldNotes.get(midi);
-        this._heldNotes.delete(midi);
-
-        // compute the release velocity
-        const holdTime = Math.pow(Math.max(time - prevNote.time, 0.1), 0.7);
-        const prevVel = prevNote.velocity;
-        let dampenGain = (3 / holdTime) * prevVel * velocity;
-        dampenGain = Math.max(dampenGain, 0.4);
-        dampenGain = Math.min(dampenGain, 4);
-
-        if (this._pedal.isDown(time)) {
-          if (!this._sustainedNotes.has(midi)) {
-            this._sustainedNotes.set(midi, time);
-          }
-        } else {
-          // release the string sound
-          this._strings.triggerRelease(midi, time);
-          // trigger the harmonics sound
-          this._harmonics.triggerAttack(midi, time, dampenGain);
-        }
-
-        // trigger the keybed release sound
-        this._keybed.start(midi, time, velocity);
-      }
-    }
+   * Put the pedal up. Dampens sustained notes.
+   */
+  pedalUp(event: PedalEvent = {}): this {
+    this._sampler?.pedalUp(event);
     return this;
   }
 
+  /**
+   * Stop all currently playing notes.
+   */
   stopAll(): this {
-    this.pedalUp();
-    this._heldNotes.forEach((_, midi) => {
-      this.keyUp({ midi });
-    });
+    this._sampler?.stopAll();
     return this;
+  }
+
+  private async _expandInBackground(from: number): Promise<void> {
+    try {
+      for (let v = from + 1; v <= this._velocities; v++) {
+        await this._sampler!.expandTo(v);
+        this._onLoadProgress?.(v / this._velocities);
+      }
+    } catch {
+      // background expansion errors are non-fatal
+    }
+  }
+
+  /**
+   * Detect the best starting velocity count based on cache state.
+   * Returns the target velocity count if cached, otherwise 1 for fast initial load.
+   */
+  private async _detectStartVelocities(): Promise<number> {
+    if (this._velocities <= 1) {
+      return 1; 
+    }
+    if (typeof window === 'undefined' || !window.caches) {
+      return 1; 
+    }
+
+    const cached = await this._isTargetCached(this._velocities);
+    return cached ? this._velocities : 1;
+  }
+
+  /**
+   * Check whether the target velocity samples are already in the cache.
+   */
+  private async _isTargetCached(velocities: number): Promise<boolean> {
+    const velLevels = velocitiesMap[velocities];
+    if (!velLevels?.length) {
+      return false; 
+    }
+
+    const singleVelLevels = new Set(velocitiesMap[1] ?? []);
+    const uniqueVels = velLevels.filter(v => !singleVelLevels.has(v));
+    if (!uniqueVels.length) {
+      return false; 
+    }
+
+    const probeUrl = this._url + getNotesUrl(69 /* A4 */, Math.min(...uniqueVels));
+    try {
+      const match = await caches.match(probeUrl);
+      return !!match;
+    } catch {
+      return false;
+    }
   }
 }
