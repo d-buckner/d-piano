@@ -10,9 +10,9 @@ This is a fork of [@tonejs/piano](https://github.com/Tonejs/Piano) by Yotam Mann
 
 - **High-quality samples** - Up to 16 velocity levels across 88 keys (Yamaha C5)
 - **Complete instrument** - Includes pedal sounds and string harmonics
-- **Progressive loading** - Loads 1 velocity level immediately for fast startup, then upgrades to full quality in the background during browser idle time
+- **Progressive loading** - Loads 1 velocity level immediately for fast startup, then upgrades to full quality in the background and seemlessly improves audio quality
 - **Cache-aware** - Probes the Cache Storage API at startup; if target-quality samples are already cached, starts at full quality immediately rather than the single-velocity warm-up pass
-- **Buffer caching** - Audio buffers are shared across multiple piano instances and across progressive upgrade steps — no re-fetching
+- **Buffer caching** - Audio buffers are shared across multiple piano instances and across progressive upgrade steps without no re-fetching
 
 ## Install
 
