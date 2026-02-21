@@ -110,10 +110,6 @@ export async function preloadSamples(
     }
   }
 
-  if (typeof window === 'undefined' || !window.caches) {
-    return; 
-  }
-
   const cache = await caches.open(PIANO_CACHE_NAME);
 
   await Promise.allSettled(urlsToFetch.map(async url => {

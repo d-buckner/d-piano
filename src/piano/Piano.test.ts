@@ -83,6 +83,10 @@ describe('Piano', () => {
     vi.clearAllMocks();
     samplerInstances = [];
 
+    vi.stubGlobal('caches', {
+      match: vi.fn().mockResolvedValue(undefined),
+    });
+
     vi.mocked(PianoSampler).mockImplementation(() => {
       const sampler = createMockSampler();
       samplerInstances.push(sampler);
@@ -211,15 +215,6 @@ describe('Piano', () => {
       );
     });
 
-    it('starts at velocities=1 when Cache API is unavailable', async () => {
-      vi.stubGlobal('caches', undefined);
-      piano = new Piano({ url: '/samples/', velocities: 8 });
-      await piano.load();
-
-      expect(PianoSampler).toHaveBeenCalledWith(
-        expect.objectContaining({ velocities: 1 })
-      );
-    });
   });
 
   describe('delegation to current sampler', () => {

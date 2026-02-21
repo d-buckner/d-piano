@@ -250,10 +250,7 @@ export class Piano extends ToneAudioNode<PianoOptions> {
    */
   private async _detectStartVelocities(): Promise<number> {
     if (this._velocities <= 1) {
-      return 1; 
-    }
-    if (typeof window === 'undefined' || !window.caches) {
-      return 1; 
+      return 1;
     }
 
     const cached = await this._isTargetCached(this._velocities);
@@ -276,11 +273,7 @@ export class Piano extends ToneAudioNode<PianoOptions> {
     }
 
     const probeUrl = this._url + getNotesUrl(69 /* A4 */, Math.min(...uniqueVels));
-    try {
-      const match = await caches.match(probeUrl);
-      return !!match;
-    } catch {
-      return false;
-    }
+    const match = await caches.match(probeUrl);
+    return !!match;
   }
 }

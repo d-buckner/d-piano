@@ -29,6 +29,7 @@ export default [
         fetch: true,
         Response: true,
         Request: true,
+        URL: true,
         caches: true,
       },
     },
