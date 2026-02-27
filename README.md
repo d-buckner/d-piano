@@ -1,6 +1,6 @@
 # d-piano
 
-A web audio piano instrument
+High quality multisampled web audio piano with progressive loading and caching
 
 ## About
 
