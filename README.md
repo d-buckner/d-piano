@@ -56,7 +56,7 @@ piano.load().then(() => {
 
 ### How progressive loading works
 
-`load()` resolves after a fast first pass (1 velocity layer) so you can start playing immediately. The upgrade to the target velocity count happens in the background via `requestIdleCallback`, expanding the velocity layers in-place without interrupting notes that are already playing.
+`load()` resolves after a fast first pass (1 velocity layer) so you can start playing immediately. The upgrade to the target velocity count happens in the background, expanding the velocity layers in-place without interrupting notes that are already playing.
 
 If the target samples are already in the Cache Storage API, the piano starts at full quality immediately instead of going through the single-velocity warm-up pass first. This pairs well with `preloadSamples` and any service worker caching strategy in your own app.
 
