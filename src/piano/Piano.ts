@@ -5,7 +5,6 @@ import {
 } from 'tone';
 
 import { PianoSampler } from './PianoSampler';
-import { getNotesUrl, velocitiesMap } from './Salamander';
 
 import type { ToneAudioNodeOptions, Unit } from 'tone';
 
@@ -71,6 +70,10 @@ export interface PianoOptions extends ToneAudioNodeOptions {
    * Progress reaches 1.0 when all target velocities are loaded.
    */
   onLoadProgress?: (_progress: number) => void;
+  /**
+   * Called if background velocity upgrades do not complete within 30 seconds.
+   */
+  onTimeout?: () => void;
 }
 
 type PianoSamplerConfig = {
@@ -89,9 +92,9 @@ type PianoSamplerConfig = {
 };
 
 /**
- * A progressive, cache-aware piano that upgrades velocity resolution in the background.
- * Loads a fast first pass immediately, then upgrades during browser idle time.
- * If samples are already cached, starts at the highest cached quality automatically.
+ * A progressive piano that upgrades velocity resolution in the background.
+ * Always starts with a single velocity for fast time-to-ready, then expands
+ * to the target velocity count. Cache hits make each expansion step fast.
  */
 export class Piano extends ToneAudioNode<PianoOptions> {
 
@@ -105,13 +108,13 @@ export class Piano extends ToneAudioNode<PianoOptions> {
 
   private _velocities: number;
 
-  private _url: string;
-
   private _samplerConfig: PianoSamplerConfig;
 
   private _onPlayable?: () => void;
 
   private _onLoadProgress?: (_progress: number) => void;
+
+  private _onTimeout?: () => void;
 
   private _loaded = false;
 
@@ -128,9 +131,9 @@ export class Piano extends ToneAudioNode<PianoOptions> {
     }
 
     this._velocities = options.velocities;
-    this._url = options.url;
     this._onPlayable = options.onPlayable;
     this._onLoadProgress = options.onLoadProgress;
+    this._onTimeout = options.onTimeout;
     this._samplerConfig = {
       minNote: options.minNote,
       maxNote: options.maxNote,
@@ -150,9 +153,10 @@ export class Piano extends ToneAudioNode<PianoOptions> {
       minNote: 21,
       onPlayable: undefined,
       onLoadProgress: undefined,
+      onTimeout: undefined,
       pedal: true,
       release: false,
-      url: 'https://tambien.github.io/Piano/Salamander/',
+      url: 'https://d-buckner.github.io/salamander-piano/',
       volume: {
         harmonics: 0,
         keybed: 0,
@@ -163,14 +167,13 @@ export class Piano extends ToneAudioNode<PianoOptions> {
   }
 
   /**
-   * Load samples. Detects cached samples and starts from the best cached quality.
-   * Resolves after the first sampler is ready; upgrades continue in the background.
+   * Load samples progressively. Resolves after the first velocity pass is ready;
+   * upgrades to the target velocity count continue in the background.
    */
   async load(): Promise<void> {
-    const startVelocities = await this._detectStartVelocities();
     const sampler = new PianoSampler({
       ...this._samplerConfig,
-      velocities: startVelocities,
+      velocities: 1,
       context: this.context,
     });
 
@@ -179,10 +182,10 @@ export class Piano extends ToneAudioNode<PianoOptions> {
     this._sampler = sampler;
     this._loaded = true;
     this._onPlayable?.();
-    this._onLoadProgress?.(startVelocities / this._velocities);
+    this._onLoadProgress?.(1 / this._velocities);
 
-    if (startVelocities < this._velocities) {
-      void this._expandInBackground(startVelocities);
+    if (this._velocities > 1) {
+      void this._expandInBackground(1);
     }
   }
 
@@ -234,8 +237,13 @@ export class Piano extends ToneAudioNode<PianoOptions> {
   }
 
   private async _expandInBackground(from: number): Promise<void> {
+    const deadline = Date.now() + 30_000;
     try {
       for (let v = from + 1; v <= this._velocities; v++) {
+        if (Date.now() >= deadline) {
+          this._onTimeout?.();
+          return;
+        }
         await this._sampler!.expandTo(v);
         this._onLoadProgress?.(v / this._velocities);
       }
@@ -244,36 +252,4 @@ export class Piano extends ToneAudioNode<PianoOptions> {
     }
   }
 
-  /**
-   * Detect the best starting velocity count based on cache state.
-   * Returns the target velocity count if cached, otherwise 1 for fast initial load.
-   */
-  private async _detectStartVelocities(): Promise<number> {
-    if (this._velocities <= 1) {
-      return 1;
-    }
-
-    const cached = await this._isTargetCached(this._velocities);
-    return cached ? this._velocities : 1;
-  }
-
-  /**
-   * Check whether the target velocity samples are already in the cache.
-   */
-  private async _isTargetCached(velocities: number): Promise<boolean> {
-    const velLevels = velocitiesMap[velocities];
-    if (!velLevels?.length) {
-      return false; 
-    }
-
-    const singleVelLevels = new Set(velocitiesMap[1] ?? []);
-    const uniqueVels = velLevels.filter(v => !singleVelLevels.has(v));
-    if (!uniqueVels.length) {
-      return false; 
-    }
-
-    const probeUrl = this._url + getNotesUrl(69 /* A4 */, Math.min(...uniqueVels));
-    const match = await caches.match(probeUrl);
-    return !!match;
-  }
 }

@@ -173,40 +173,8 @@ describe('Piano', () => {
     });
   });
 
-  describe('cache detection', () => {
-    function setupCacheMock(hitUrl?: string) {
-      const mockCaches = {
-        match: vi.fn().mockImplementation((url: string) => {
-          if (hitUrl && url.includes(hitUrl)) {
-            return Promise.resolve(new Response());
-          }
-          return Promise.resolve(undefined);
-        }),
-      };
-      vi.stubGlobal('caches', mockCaches);
-      return mockCaches;
-    }
-
-    it('starts at the target velocity when samples are cached', async () => {
-      setupCacheMock('probe_v1.ogg');
-      piano = new Piano({ url: '/samples/', velocities: 8 });
-      await piano.load();
-
-      expect(PianoSampler).toHaveBeenCalledWith(
-        expect.objectContaining({ velocities: 8 })
-      );
-    });
-
-    it('does not call expandTo when starting from cache at target velocity', async () => {
-      setupCacheMock('probe_v1.ogg');
-      piano = new Piano({ url: '/samples/', velocities: 8 });
-      await piano.load();
-
-      expect(samplerInstances[0].expandTo).not.toHaveBeenCalled();
-    });
-
-    it('starts at velocities=1 on cache miss', async () => {
-      setupCacheMock(undefined);
+  describe('initial velocity', () => {
+    it('always starts at velocities=1 regardless of target', async () => {
       piano = new Piano({ url: '/samples/', velocities: 8 });
       await piano.load();
 
@@ -215,6 +183,13 @@ describe('Piano', () => {
       );
     });
 
+    it('always expands in background when target velocity > 1', async () => {
+      piano = new Piano({ url: '/samples/', velocities: 3 });
+      await piano.load();
+
+      expect(samplerInstances[0].expandTo).toHaveBeenCalledWith(2);
+      expect(samplerInstances[0].expandTo).toHaveBeenCalledWith(3);
+    });
   });
 
   describe('delegation to current sampler', () => {
