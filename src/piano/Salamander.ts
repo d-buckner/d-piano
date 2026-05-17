@@ -1,7 +1,7 @@
 import { midiToNote } from './Util';
 
 
-export const githubURL = 'https://tambien.github.io/Piano/Salamander/';
+export const githubURL = 'https://d-buckner.github.io/salamander-piano/';
 
 export function getReleasesUrl(midi: number): string {
   return `rel${midi - 20}.ogg`;
