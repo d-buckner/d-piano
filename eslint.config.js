@@ -33,6 +33,8 @@ export default [
         caches: true,
         indexedDB: true,
         IDBDatabase: true,
+        IDBFactory: true,
+        IDBRequest: true,
         AudioBuffer: true,
       },
     },

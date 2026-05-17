@@ -69,7 +69,9 @@ type StoredPcm = ReturnType<typeof makeStoredPcm>;
 function makeGetReq(result: StoredPcm | undefined) {
   const req = { result } as Partial<IDBRequest<StoredPcm | undefined>>;
   Object.defineProperty(req, 'onsuccess', {
-    set(fn: () => void) { Promise.resolve().then(() => fn()); },
+    set(fn: () => void) {
+      Promise.resolve().then(() => fn()); 
+    },
     configurable: true,
   });
   Object.defineProperty(req, 'onerror', {
@@ -118,8 +120,12 @@ function createIdbMock(seed: Map<string, StoredPcm> = new Map()) {
 
   const tx = {
     objectStore: vi.fn(() => objectStore),
-    get oncomplete() { return pendingOncomplete; },
-    set oncomplete(fn: (() => void) | null) { pendingOncomplete = fn; },
+    get oncomplete() {
+      return pendingOncomplete; 
+    },
+    set oncomplete(fn: (() => void) | null) {
+      pendingOncomplete = fn; 
+    },
     onerror: null,
   };
 
@@ -160,9 +166,9 @@ function createMockResponse(): Response {
 
 function resetCacheState() {
   const cache = AudioBufferCache as unknown as Record<string, unknown>;
-  cache['buffers'] = {};
-  cache['loading'] = {};
-  cache['_db'] = null;
+  cache.buffers = {};
+  cache.loading = {};
+  cache._db = null;
 }
 
 async function flushMicrotasks() {
