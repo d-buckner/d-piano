@@ -31,6 +31,9 @@ export default [
         Request: true,
         URL: true,
         caches: true,
+        indexedDB: true,
+        IDBDatabase: true,
+        AudioBuffer: true,
       },
     },
     plugins: {
