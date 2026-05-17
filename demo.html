@@ -53,7 +53,50 @@
     .phase-text { flex: 1; font-size: 14px; color: #444; }
     .phase-time { font-size: 12px; color: #999; font-family: monospace; min-width: 60px; text-align: right; }
 
-    /* Keys */
+    /* Piano SVG */
+    #piano-container { overflow-x: auto; padding-bottom: 4px; }
+    #piano-svg { display: block; user-select: none; }
+
+    .piano-key-white { fill: white; stroke: #ccc; stroke-width: 1; }
+    .piano-key-black { fill: #1e293b; stroke: #111; stroke-width: 0.5; }
+
+    #piano-svg.loaded .piano-key-white { cursor: pointer; }
+    #piano-svg.loaded .piano-key-white:hover { fill: #f5f5f5; }
+    #piano-svg.loaded .piano-key-black { cursor: pointer; }
+    #piano-svg.loaded .piano-key-black:hover { fill: #334155; }
+
+    #piano-svg .piano-key-white.active { fill: #bfdbfe !important; }
+    #piano-svg .piano-key-black.active { fill: #1d4ed8 !important; }
+
+    .key-label-white {
+      font-size: 9px; fill: #bbb;
+      font-family: system-ui, sans-serif;
+      pointer-events: none;
+    }
+    .key-shortcut-white {
+      font-size: 10px; fill: #888; font-weight: 600;
+      font-family: ui-monospace, monospace;
+      pointer-events: none;
+    }
+    .key-shortcut-black {
+      font-size: 9px; fill: #94a3b8;
+      font-family: ui-monospace, monospace;
+      pointer-events: none;
+    }
+
+    /* Sustain pill */
+    #sustain-pill {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 500;
+      background: #f0f0f0; color: #aaa;
+      border: 1px solid #e0e0e0;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    #sustain-pill.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+    .piano-hint { font-size: 12px; color: #bbb; }
+
+    /* Chord keys */
     .keys { display: flex; gap: 6px; flex-wrap: wrap; }
     .key {
       padding: 11px 14px;
@@ -99,7 +142,7 @@
   <div class="config-row">
     <label>
       <span>Sample URL</span>
-      <input id="sampleUrl" value="https://tambien.github.io/Piano/Salamander/" />
+      <input id="sampleUrl" value="https://d-buckner.github.io/salamander-piano/" />
     </label>
     <label>
       <span>Target velocities</span>
@@ -131,7 +174,16 @@
 </div>
 
 <div class="card">
-  <h2>Play</h2>
+  <h2>Piano Keyboard</h2>
+  <div id="piano-container"></div>
+  <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px;">
+    <div id="sustain-pill">Sustain (Space)</div>
+    <span class="piano-hint">Keys a–; play white notes · w e t y u o p play sharps</span>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Chords</h2>
   <div class="keys" id="keys">
     <button class="key" disabled data-notes="C3">C3</button>
     <button class="key" disabled data-notes="E3">E3</button>
@@ -157,6 +209,200 @@
   let piano = null;
   let t0 = null;
 
+  // ── Keyboard mapping ──────────────────────────────────────────────────────
+  const KEY_MAP = {
+    'a': 'C4',  'w': 'C#4', 's': 'D4',  'e': 'D#4',
+    'd': 'E4',  'f': 'F4',  't': 'F#4', 'g': 'G4',
+    'y': 'G#4', 'h': 'A4',  'u': 'A#4', 'j': 'B4',
+    'k': 'C5',  'o': 'C#5', 'l': 'D5',  'p': 'D#5',
+    ';': 'E5',
+  };
+  const NOTE_KEY = Object.fromEntries(Object.entries(KEY_MAP).map(([k, v]) => [v, k]));
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function noteToId(note) {
+    return 'pkey-' + note.replace('#', 's');
+  }
+
+  function highlightKey(note, active) {
+    const el = document.getElementById(noteToId(note));
+    if (!el) return;
+    el.classList.toggle('active', active);
+  }
+
+  function noteOn(note, velocity = 0.8) {
+    if (!piano) return;
+    piano.keyDown({ note, velocity });
+    highlightKey(note, true);
+  }
+
+  function noteOff(note) {
+    if (!piano) return;
+    piano.keyUp({ note });
+    highlightKey(note, false);
+  }
+
+  // ── Build SVG piano ───────────────────────────────────────────────────────
+  function buildPianoSVG() {
+    const NS = 'http://www.w3.org/2000/svg';
+    const WW = 40, WH = 150, BW = 24, BH = 92;
+    const noteNames = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+    // Which white key positions have a black key to their right?
+    const hasBlack =   [true, true, false, true, true, true, false];
+
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('id', 'piano-svg');
+    svg.setAttribute('width', 14 * WW);
+    svg.setAttribute('height', WH + 2);
+    svg.style.display = 'block';
+
+    const whiteKeys = [];
+    const blackKeys = [];
+    let wi = 0;
+
+    for (const oct of [4, 5]) {
+      for (let i = 0; i < 7; i++) {
+        const name = noteNames[i];
+        const note = name + oct;
+        const x = wi * WW;
+        whiteKeys.push({ note, x });
+        if (hasBlack[i]) {
+          blackKeys.push({ note: name + '#' + oct, x: (wi + 1) * WW - BW / 2 });
+        }
+        wi++;
+      }
+    }
+
+    function mkEl(tag, attrs, cls) {
+      const el = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+      if (cls) el.setAttribute('class', cls);
+      return el;
+    }
+
+    // 1. White key rects
+    for (const { note, x } of whiteKeys) {
+      svg.appendChild(mkEl('rect', {
+        x: x + 0.5, y: 0.5, width: WW - 1, height: WH - 1, rx: 4,
+        id: noteToId(note), 'data-note': note,
+      }, 'piano-key piano-key-white'));
+    }
+
+    // 2. White key labels (note name + keyboard shortcut)
+    for (const { note, x } of whiteKeys) {
+      const cx = x + WW / 2;
+      const shortcut = NOTE_KEY[note];
+      if (shortcut) {
+        const t = mkEl('text', { x: cx, y: WH - 26, 'text-anchor': 'middle' }, 'key-shortcut-white');
+        t.textContent = shortcut;
+        svg.appendChild(t);
+      }
+      const label = mkEl('text', { x: cx, y: WH - 10, 'text-anchor': 'middle' }, 'key-label-white');
+      label.textContent = note;
+      svg.appendChild(label);
+    }
+
+    // 3. Black key rects (rendered on top of white keys)
+    for (const { note, x } of blackKeys) {
+      svg.appendChild(mkEl('rect', {
+        x: x + 0.5, y: 0.5, width: BW - 1, height: BH - 1, rx: 3,
+        id: noteToId(note), 'data-note': note,
+      }, 'piano-key piano-key-black'));
+    }
+
+    // 4. Black key shortcut labels
+    for (const { note, x } of blackKeys) {
+      const shortcut = NOTE_KEY[note];
+      if (!shortcut) continue;
+      const t = mkEl('text', { x: x + BW / 2, y: BH - 8, 'text-anchor': 'middle' }, 'key-shortcut-black');
+      t.textContent = shortcut;
+      svg.appendChild(t);
+    }
+
+    return svg;
+  }
+
+  document.getElementById('piano-container').appendChild(buildPianoSVG());
+
+  // ── Mouse interaction on SVG piano ────────────────────────────────────────
+  let mouseDownNote = null;
+
+  document.getElementById('piano-container').addEventListener('mousedown', async e => {
+    if (!piano) return;
+    const key = e.target.closest('[data-note]');
+    if (!key) return;
+    await Tone.start();
+    mouseDownNote = key.dataset.note;
+    noteOn(mouseDownNote);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!mouseDownNote) return;
+    noteOff(mouseDownNote);
+    mouseDownNote = null;
+  });
+
+  // ── Keyboard interaction ──────────────────────────────────────────────────
+  document.addEventListener('keydown', async e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    if (e.repeat) return;
+
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (piano) {
+        piano.pedalDown();
+        document.getElementById('sustain-pill').classList.add('active');
+      }
+      return;
+    }
+
+    const key = e.key === ';' ? ';' : e.key.toLowerCase();
+    const note = KEY_MAP[key];
+    if (!note || !piano) return;
+    await Tone.start();
+    noteOn(note);
+  });
+
+  document.addEventListener('keyup', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+    if (e.key === ' ') {
+      if (piano) {
+        piano.pedalUp();
+        document.getElementById('sustain-pill').classList.remove('active');
+      }
+      return;
+    }
+
+    const key = e.key === ';' ? ';' : e.key.toLowerCase();
+    const note = KEY_MAP[key];
+    if (!note) return;
+    noteOff(note);
+  });
+
+  // ── Chord buttons ─────────────────────────────────────────────────────────
+  document.getElementById('keys').addEventListener('click', async e => {
+    const key = e.target.closest('.key');
+    if (!key || key.disabled || !piano) return;
+    await Tone.start();
+
+    const notes = key.dataset.notes.split(',');
+    notes.forEach(note => {
+      piano.keyDown({ note, velocity: 0.8 });
+      highlightKey(note, true);
+    });
+    key.classList.add('playing');
+
+    setTimeout(() => {
+      notes.forEach(note => {
+        piano.keyUp({ note });
+        highlightKey(note, false);
+      });
+      key.classList.remove('playing');
+    }, 1500);
+  });
+
+  // ── Logging ───────────────────────────────────────────────────────────────
   function elapsed() {
     return t0 ? `+${Date.now() - t0}ms` : '';
   }
@@ -176,22 +422,7 @@
     if (time != null) document.getElementById(`t${n}`).textContent = `${time}ms`;
   }
 
-  // Wire up play keys
-  document.getElementById('keys').addEventListener('click', async e => {
-    const key = e.target.closest('.key');
-    if (!key || key.disabled || !piano) return;
-    await Tone.start();
-
-    const notes = key.dataset.notes.split(',');
-    notes.forEach(note => piano.keyDown({ note, velocity: 0.8 }));
-    key.classList.add('playing');
-
-    setTimeout(() => {
-      notes.forEach(note => piano.keyUp({ note }));
-      key.classList.remove('playing');
-    }, 1500);
-  });
-
+  // ── Load piano ────────────────────────────────────────────────────────────
   window.initPiano = async function () {
     const url = document.getElementById('sampleUrl').value.trim();
     const velocities = parseInt(document.getElementById('velocities').value);
@@ -234,13 +465,13 @@
 
     if (velocities > 1) {
       setPhase(2, 'active', `Upgrading to ${velocities} velocities in background…`, null);
-      log('Upgrade scheduled via requestIdleCallback');
     } else {
       setPhase(2, 'skipped', 'No upgrade (velocities = 1)', null);
     }
 
     document.querySelectorAll('.key').forEach(k => k.disabled = false);
     document.getElementById('loadBtn').disabled = false;
+    document.getElementById('piano-svg').classList.add('loaded');
   };
 </script>
 </body>

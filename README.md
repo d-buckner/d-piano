@@ -39,7 +39,7 @@ import { Piano } from 'd-piano'
 ### Create and load samples
 
 ```javascript
-// Create the piano — progressive loading is automatic
+// Create the piano — samples are hosted automatically, no URL needed
 const piano = new Piano({
 	velocities: 8  // target quality; default is 8
 })
@@ -95,7 +95,7 @@ interface PianoOptions {
 	maxNote: number;       // Highest MIDI note to load (default: 108)
 	release: boolean;      // Include release sounds (default: false)
 	pedal: boolean;        // Include pedal sounds (default: true)
-	url: string;           // Sample directory URL
+	url: string;           // Sample directory URL (default: 'https://d-buckner.github.io/salamander-piano/')
 	maxPolyphony: number;  // Max simultaneous notes (default: 32)
 	volume: {              // Component volume levels in dB (default: 0)
 		pedal: number;
